@@ -1,0 +1,38 @@
+<div class="sidebar">
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <span class="logo-text">AriyAI</span>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    <ul class="nav-list">
+      @for (menu of menus; track menu.name) {
+        <li class="nav-item">
+          <!-- Parent Menu -->
+          <div class="nav-link" [class.has-children]="menu.children.length > 0" [class.expanded]="menu.isOpen" (click)="toggleMenu(menu)">
+            <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
+            <span class="nav-text">{{ menu.name }}</span>
+            @if (menu.children.length > 0) {
+              <span class="material-icons-outlined nav-arrow">{{ menu.isOpen ? 'expand_more' : 'chevron_right' }}</span>
+            }
+          </div>
+
+          <!-- Children -->
+          @if (menu.isOpen && menu.children.length > 0) {
+            <ul class="sub-nav-list">
+              @for (child of menu.children; track child.name) {
+                <li class="sub-nav-item">
+                  <a class="sub-nav-link" [routerLink]="child.link" routerLinkActive="active">
+                    <span class="material-icons-outlined sub-nav-icon icon-sm">{{ child.icon || 'description' }}</span>
+                    <span>{{ child.name }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </li>
+      }
+    </ul>
+  </nav>
+</div>
