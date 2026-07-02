@@ -2,6 +2,34 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using AriyAI.ERP.Api.Data;
 
+// Load .env file from workspace root or current directory if it exists
+var currentDir = Directory.GetCurrentDirectory();
+var envPaths = new[]
+{
+    Path.Combine(currentDir, ".env"),
+    Path.Combine(currentDir, "..", ".env"),
+    Path.Combine(currentDir, "..", "..", ".env")
+};
+
+foreach (var path in envPaths)
+{
+    if (File.Exists(path))
+    {
+        foreach (var line in File.ReadAllLines(path))
+        {
+            if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#")) continue;
+            var parts = line.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var envKey = parts[0].Trim();
+                var envValue = parts[1].Trim().Trim('"').Trim('\''); // Strip optional quotes
+                Environment.SetEnvironmentVariable(envKey, envValue);
+            }
+        }
+        break; // Load first found .env
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

@@ -11,6 +11,7 @@ export const routes: Routes = [
   { path: 'lead/quotation', component: QuotationListComponent },
   { path: 'lead/quotation/new', component: QuotationFormComponent },
   { path: 'lead/quotation/edit/:id', component: QuotationFormComponent },
+  { path: 'ai-assistant', loadComponent: () => import('./modules/ai-assistant/ai-assistant.component').then(m => m.AiAssistantComponent) },
   { path: '', redirectTo: 'lead/sales-enquiry', pathMatch: 'full' },
   { path: '**', redirectTo: 'lead/sales-enquiry' }
 ];

@@ -70,4 +70,9 @@ export class ApiService {
   deleteQuotation(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/quotations/${id}`);
   }
+
+  // AI Chatbot
+  postChatMessage(message: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/chat`, { message });
+  }
 }

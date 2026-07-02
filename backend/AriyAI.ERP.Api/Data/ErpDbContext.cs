@@ -16,6 +16,7 @@ namespace AriyAI.ERP.Api.Data
         public DbSet<EnquiryProduct> EnquiryProducts => Set<EnquiryProduct>();
         public DbSet<Quotation> Quotations => Set<Quotation>();
         public DbSet<QuotationProduct> QuotationProducts => Set<QuotationProduct>();
+        public DbSet<SalesRecord> SalesRecords => Set<SalesRecord>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

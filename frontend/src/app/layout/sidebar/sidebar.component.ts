@@ -49,7 +49,8 @@ export class SidebarComponent {
     { name: 'Replacement', icon: 'swap_horiz', isOpen: false, children: [] as any[] },
     { name: 'Finance', icon: 'account_balance', isOpen: false, children: [] as any[] },
     { name: 'Production', icon: 'precision_manufacturing', isOpen: false, children: [] as any[] },
-    { name: 'HRMS', icon: 'badge', isOpen: false, children: [] as any[] }
+    { name: 'HRMS', icon: 'badge', isOpen: false, children: [] as any[] },
+    { name: 'AI Assistant', icon: 'smart_toy', isOpen: false, children: [] as any[], link: '/ai-assistant' }
   ];
 
   toggleMenu(menu: any) {

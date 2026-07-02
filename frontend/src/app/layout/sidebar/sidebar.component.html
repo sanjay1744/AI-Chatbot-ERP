@@ -10,13 +10,20 @@
       @for (menu of menus; track menu.name) {
         <li class="nav-item">
           <!-- Parent Menu -->
-          <div class="nav-link" [class.has-children]="menu.children.length > 0" [class.expanded]="menu.isOpen" (click)="toggleMenu(menu)">
-            <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
-            <span class="nav-text">{{ menu.name }}</span>
-            @if (menu.children.length > 0) {
-              <span class="material-icons-outlined nav-arrow">{{ menu.isOpen ? 'expand_more' : 'chevron_right' }}</span>
-            }
-          </div>
+          @if (menu.link) {
+            <a class="nav-link" [routerLink]="menu.link" routerLinkActive="active">
+              <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
+              <span class="nav-text">{{ menu.name }}</span>
+            </a>
+          } @else {
+            <div class="nav-link" [class.has-children]="menu.children.length > 0" [class.expanded]="menu.isOpen" (click)="toggleMenu(menu)">
+              <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
+              <span class="nav-text">{{ menu.name }}</span>
+              @if (menu.children.length > 0) {
+                <span class="material-icons-outlined nav-arrow">{{ menu.isOpen ? 'expand_more' : 'chevron_right' }}</span>
+              }
+            </div>
+          }
 
           <!-- Children -->
           @if (menu.isOpen && menu.children.length > 0) {

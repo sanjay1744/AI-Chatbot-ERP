@@ -42,6 +42,10 @@ ENV/
 .env.test.local
 .env.production.local
 *.secret
+key.json
+keys.json
+credentials.json
+appsettings.local.json
 
 # IDEs & OS Files
 .vscode/
