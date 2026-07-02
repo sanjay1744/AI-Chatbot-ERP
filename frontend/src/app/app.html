@@ -7,3 +7,15 @@
     </div>
   </div>
 </div>
+
+<!-- Floating Action Button (FAB) -->
+<button class="copilot-fab" [class.active]="copilotState.isOpen()" (click)="toggleCopilot()" title="AriyAI Copilot">
+  <span class="material-icons-outlined">{{ copilotState.isOpen() ? 'close' : 'smart_toy' }}</span>
+</button>
+
+<!-- Global Floating Copilot Popup -->
+@if (copilotState.isOpen()) {
+  <div class="copilot-popup-container">
+    <app-ai-assistant></app-ai-assistant>
+  </div>
+}

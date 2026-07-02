@@ -2,6 +2,7 @@ import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef, AfterV
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { CopilotStateService } from '../../services/copilot-state.service';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -21,6 +22,7 @@ interface Message {
 export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterViewInit {
   private apiService = inject(ApiService);
   private cdr = inject(ChangeDetectorRef);
+  private copilotStateService = inject(CopilotStateService);
 
   @ViewChild('chatScrollContainer') private chatScrollContainer!: ElementRef;
   @ViewChild('chatInput') private chatInput!: ElementRef;
@@ -135,5 +137,9 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
     this.messages = [];
     this.ngOnInit();
     this.focusInput();
+  }
+
+  closeCopilot() {
+    this.copilotStateService.close();
   }
 }

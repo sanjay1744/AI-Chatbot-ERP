@@ -51,7 +51,7 @@
   gap: 12px;
   user-select: none;
 
-  &:hover {
+  &:hover, &.active {
     background-color: var(--sidebar-hover);
     color: #ffffff;
   }

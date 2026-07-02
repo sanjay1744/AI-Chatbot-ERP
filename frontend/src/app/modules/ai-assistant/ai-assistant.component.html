@@ -8,10 +8,15 @@
         <p class="subtitle">Intelligent Manufacturing Database Assistant</p>
       </div>
     </div>
-    <button class="clear-btn" (click)="clearChat()" title="Reset Conversation">
-      <span class="material-icons-outlined">refresh</span>
-      <span>Clear</span>
-    </button>
+    <div class="header-actions">
+      <button class="clear-btn" (click)="clearChat()" title="Reset Conversation">
+        <span class="material-icons-outlined">refresh</span>
+        <span>Clear</span>
+      </button>
+      <button class="close-btn" (click)="closeCopilot()" title="Close Copilot">
+        <span class="material-icons-outlined">close</span>
+      </button>
+    </div>
   </div>
 
   <!-- Messages Scroll Area -->
@@ -31,9 +36,6 @@
           <!-- Content block -->
           <div class="message-bubble">
             <div class="message-text">{{ msg.text }}</div>
-
-
-
             <span class="timestamp">{{ msg.timestamp | date:'shortTime' }}</span>
           </div>
         </div>

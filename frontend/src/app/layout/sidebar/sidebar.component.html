@@ -11,10 +11,17 @@
         <li class="nav-item">
           <!-- Parent Menu -->
           @if (menu.link) {
-            <a class="nav-link" [routerLink]="menu.link" routerLinkActive="active">
-              <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
-              <span class="nav-text">{{ menu.name }}</span>
-            </a>
+            @if (menu.name === 'AI Assistant') {
+              <div class="nav-link" [class.active]="isCopilotOpen()" (click)="toggleCopilot($event)">
+                <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
+                <span class="nav-text">{{ menu.name }}</span>
+              </div>
+            } @else {
+              <a class="nav-link" [routerLink]="menu.link" routerLinkActive="active">
+                <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
+                <span class="nav-text">{{ menu.name }}</span>
+              </a>
+            }
           } @else {
             <div class="nav-link" [class.has-children]="menu.children.length > 0" [class.expanded]="menu.isOpen" (click)="toggleMenu(menu)">
               <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>

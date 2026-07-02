@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { CopilotStateService } from '../../services/copilot-state.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -10,6 +11,8 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent {
+  private copilotStateService = inject(CopilotStateService);
+
   menus = [
     { name: 'UMS', icon: 'people', isOpen: false, children: [] as any[] },
     { name: 'Admin', icon: 'settings', isOpen: false, children: [] as any[] },
@@ -57,5 +60,15 @@ export class SidebarComponent {
     if (menu.children && menu.children.length > 0) {
       menu.isOpen = !menu.isOpen;
     }
+  }
+
+  toggleCopilot(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.copilotStateService.toggle();
+  }
+
+  isCopilotOpen(): boolean {
+    return this.copilotStateService.isOpen();
   }
 }
