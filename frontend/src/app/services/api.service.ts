@@ -72,7 +72,7 @@ export class ApiService {
   }
 
   // AI Chatbot
-  postChatMessage(message: string): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/chat`, { message });
+  postChatMessage(message: string, history: { sender: string; text: string }[] = []): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/chat`, { message, history });
   }
 }

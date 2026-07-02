@@ -25,6 +25,11 @@ obj/
 *.exe
 *.pdb
 
+# SQLite temp files
+*.db-shm
+*.db-wal
+*.db-journal
+
 # Python
 __pycache__/
 *.py[cod]

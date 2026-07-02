@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -18,11 +18,12 @@ interface Message {
   templateUrl: './ai-assistant.component.html',
   styleUrls: ['./ai-assistant.component.scss']
 })
-export class AiAssistantComponent implements OnInit, AfterViewChecked {
+export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterViewInit {
   private apiService = inject(ApiService);
   private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('chatScrollContainer') private chatScrollContainer!: ElementRef;
+  @ViewChild('chatInput') private chatInput!: ElementRef;
 
   userInput: string = '';
   messages: Message[] = [];
@@ -49,6 +50,20 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked {
     this.scrollToBottom();
   }
 
+  ngAfterViewInit() {
+    this.focusInput();
+  }
+
+  focusInput(): void {
+    setTimeout(() => {
+      try {
+        this.chatInput.nativeElement.focus();
+      } catch (err) {
+        // Ignore
+      }
+    }, 0);
+  }
+
   sendMessage(text: string) {
     if (!text || text.trim() === '' || this.isLoading) {
       return;
@@ -66,7 +81,11 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked {
     this.cdr.detectChanges();
     this.scrollToBottom();
 
-    this.apiService.postChatMessage(userMessage).subscribe({
+    const history = this.messages
+      .slice(0, -1)
+      .map(m => ({ sender: m.sender, text: m.text }));
+
+    this.apiService.postChatMessage(userMessage, history).subscribe({
       next: (res) => {
         this.messages.push({
           sender: 'ai',
@@ -78,6 +97,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked {
         this.isLoading = false;
         this.cdr.detectChanges();
         this.scrollToBottom();
+        this.focusInput();
       },
       error: (err) => {
         console.error(err);
@@ -89,6 +109,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked {
         this.isLoading = false;
         this.cdr.detectChanges();
         this.scrollToBottom();
+        this.focusInput();
       }
     });
   }
@@ -113,5 +134,6 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked {
   clearChat() {
     this.messages = [];
     this.ngOnInit();
+    this.focusInput();
   }
 }

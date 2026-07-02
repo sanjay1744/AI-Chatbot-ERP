@@ -32,46 +32,7 @@
           <div class="message-bubble">
             <div class="message-text">{{ msg.text }}</div>
 
-            <!-- SQL Query details -->
-            @if (msg.sql) {
-              <div class="sql-block">
-                <div class="sql-header">
-                  <span class="material-icons-outlined sql-icon">terminal</span>
-                  <span>Executed SQL Query (SQLite)</span>
-                </div>
-                <pre class="sql-code"><code>{{ msg.sql }}</code></pre>
-              </div>
-            }
 
-            <!-- Tabular Query Results -->
-            @if (msg.data && msg.data.length > 0) {
-              <div class="results-block">
-                <div class="results-header">
-                  <span class="material-icons-outlined results-icon">table_chart</span>
-                  <span>Query Results ({{ msg.data.length }} rows)</span>
-                </div>
-                <div class="results-table-wrapper">
-                  <table class="dynamic-results-table">
-                    <thead>
-                      <tr>
-                        @for (header of getTableHeaders(msg.data); track header) {
-                          <th>{{ header }}</th>
-                        }
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (row of msg.data; track row) {
-                        <tr>
-                          @for (header of getTableHeaders(msg.data); track header) {
-                            <td>{{ row[header] }}</td>
-                          }
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            }
 
             <span class="timestamp">{{ msg.timestamp | date:'shortTime' }}</span>
           </div>
@@ -112,6 +73,7 @@
   <div class="chat-input-footer">
     <form (ngSubmit)="sendMessage(userInput)" class="input-form">
       <input 
+        #chatInput
         type="text" 
         name="userInput"
         class="chat-input" 
