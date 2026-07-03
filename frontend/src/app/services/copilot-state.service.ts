@@ -5,6 +5,7 @@ import { Injectable, signal } from '@angular/core';
 })
 export class CopilotStateService {
   isOpen = signal<boolean>(false);
+  isExpanded = signal<boolean>(false);
 
   toggle(): void {
     this.isOpen.update(val => !val);
@@ -16,5 +17,10 @@ export class CopilotStateService {
 
   close(): void {
     this.isOpen.set(false);
+    this.isExpanded.set(false);
+  }
+
+  toggleExpanded(): void {
+    this.isExpanded.update(val => !val);
   }
 }

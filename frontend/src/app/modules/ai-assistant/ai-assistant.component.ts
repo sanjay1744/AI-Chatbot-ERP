@@ -41,6 +41,15 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
   activeModalChartMessage: Message | null = null;
   private chatSubscription?: Subscription;
 
+  // Chat History Sidebar states
+  isHistoryOpen: boolean = false;
+  sessions: any[] = [];
+  filteredSessions: any[] = [];
+  currentSessionId: number | null = null;
+  historySearchQuery: string = '';
+  editingSessionId: number | null = null;
+  editingTitle: string = '';
+
   suggestionChips = [
     'What are the total sales across all records?',
     'Who is the top-performing sales agent?',
@@ -50,12 +59,14 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
   ];
 
   ngOnInit() {
-    // Add initial welcome message
+    this.currentSessionId = null;
+    this.messages = [];
     this.messages.push({
       sender: 'ai',
       text: "Hi! I'm AriyAI, your intelligent ERP & CRM copilot. How can I help you today?",
       timestamp: new Date()
     });
+    this.loadSessions();
   }
 
   ngAfterViewChecked() {
@@ -76,6 +87,138 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
     }, 0);
   }
 
+  // History operations
+  toggleHistory(open?: boolean) {
+    this.isHistoryOpen = open !== undefined ? open : !this.isHistoryOpen;
+    this.copilotStateService.isExpanded.set(this.isHistoryOpen);
+    if (this.isHistoryOpen) {
+      this.loadSessions();
+    }
+  }
+
+  loadSessions() {
+    this.apiService.getChatSessions().subscribe({
+      next: (res) => {
+        this.sessions = res;
+        this.filterSessions();
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to load chat sessions', err)
+    });
+  }
+
+  filterSessions() {
+    if (!this.historySearchQuery || this.historySearchQuery.trim() === '') {
+      this.filteredSessions = [...this.sessions];
+    } else {
+      const q = this.historySearchQuery.toLowerCase();
+      this.filteredSessions = this.sessions.filter(s => 
+        s.title && s.title.toLowerCase().includes(q)
+      );
+    }
+  }
+
+  selectSession(sessionId: number) {
+    if (this.isLoading) return;
+    this.currentSessionId = sessionId;
+    this.isLoading = true;
+    this.cdr.detectChanges();
+
+    this.apiService.getChatSession(sessionId).subscribe({
+      next: (res) => {
+        const loadedMessages: Message[] = [];
+        if (res.messages && res.messages.length > 0) {
+          res.messages.forEach((m: any) => {
+            const data = m.data && m.data.length > 0 ? m.data : undefined;
+            let parsedData: any[] | undefined = undefined;
+            if (!data && m.sender === 'ai') {
+              parsedData = this.parseMessageForLists(m.text);
+            }
+
+            loadedMessages.push({
+              sender: m.sender as 'user' | 'ai',
+              text: m.text,
+              sql: m.sql || '',
+              data: data,
+              parsedData: parsedData,
+              chart: m.chart || undefined,
+              timestamp: new Date(m.timestamp),
+              filterText: '',
+              sortColumn: '',
+              sortAscending: true
+            });
+          });
+          this.messages = loadedMessages;
+        } else {
+          this.messages = [];
+        }
+        this.isLoading = false;
+        this.toggleHistory(false); // Close history drawer
+        this.cdr.detectChanges();
+        this.scrollToBottom();
+        this.focusInput();
+      },
+      error: (err) => {
+        console.error('Failed to load session details', err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  startRename(session: any) {
+    this.editingSessionId = session.id;
+    this.editingTitle = session.title;
+    setTimeout(() => {
+      const inputEl = document.querySelector('.item-title-block input') as HTMLInputElement;
+      if (inputEl) {
+        inputEl.focus();
+        inputEl.select();
+      }
+    }, 50);
+  }
+
+  saveRename(sessionId: number) {
+    if (!this.editingTitle || this.editingTitle.trim() === '') {
+      this.editingSessionId = null;
+      return;
+    }
+
+    const title = this.editingTitle.trim();
+    this.apiService.renameChatSession(sessionId, title).subscribe({
+      next: () => {
+        const session = this.sessions.find(s => s.id === sessionId);
+        if (session) {
+          session.title = title;
+        }
+        this.filterSessions();
+        this.editingSessionId = null;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to rename session', err);
+        this.editingSessionId = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  deleteSession(sessionId: number) {
+    if (confirm('Are you sure you want to delete this conversation?')) {
+      this.apiService.deleteChatSession(sessionId).subscribe({
+        next: () => {
+          this.sessions = this.sessions.filter(s => s.id !== sessionId);
+          this.filterSessions();
+          if (this.currentSessionId === sessionId) {
+            this.clearChat();
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => console.error('Failed to delete session', err)
+      });
+    }
+  }
+
   sendMessage(text: string) {
     if (!text || text.trim() === '' || this.isLoading) {
       return;
@@ -93,11 +236,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
     this.cdr.detectChanges();
     this.scrollToBottom();
 
-    const history = this.messages
-      .slice(0, -1)
-      .map(m => ({ sender: m.sender, text: m.text }));
-
-    this.chatSubscription = this.apiService.postChatMessage(userMessage, history).subscribe({
+    this.chatSubscription = this.apiService.postChatMessage(userMessage, this.currentSessionId).subscribe({
       next: (res) => {
         const text = res.reply || 'Here is the data from the database.';
         const data = res.data && res.data.length > 0 ? res.data : undefined;
@@ -118,8 +257,19 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
           sortColumn: '',
           sortAscending: true
         });
+
+        const isNew = this.currentSessionId === null;
+        if (res.sessionId) {
+          this.currentSessionId = res.sessionId;
+        }
+
         this.isLoading = false;
         this.chatSubscription = undefined;
+        
+        if (isNew) {
+          this.loadSessions();
+        }
+
         this.cdr.detectChanges();
         this.scrollToBottom();
         this.focusInput();
@@ -435,8 +585,13 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
   }
 
   clearChat() {
+    this.currentSessionId = null;
     this.messages = [];
-    this.ngOnInit();
+    this.messages.push({
+      sender: 'ai',
+      text: "Hi! I'm AriyAI, your intelligent ERP & CRM copilot. How can I help you today?",
+      timestamp: new Date()
+    });
     this.focusInput();
   }
 
