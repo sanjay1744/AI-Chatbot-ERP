@@ -39,7 +39,7 @@
               <div class="message-text">{{ msg.text }}</div>
 
               @if (msg.chart) {
-                <div class="chart-container">
+                <div class="chart-container clickable-chart" (click)="openChartModal(msg)" title="Click to view fullscreen graph">
                   <app-chart-renderer [chartConfig]="msg.chart"></app-chart-renderer>
                 </div>
               }
@@ -289,6 +289,32 @@
             }
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Fullscreen Chart Modal Popup -->
+@if (activeModalChartMessage) {
+  <div class="chart-modal-backdrop" (click)="closeChartModal()">
+    <div class="chart-modal-content" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="chart-modal-header">
+        <div class="modal-title-area">
+          <span class="material-icons-outlined modal-title-icon">bar_chart</span>
+          <div>
+            <h3 class="modal-main-title">Visual Analytics View</h3>
+            <p class="modal-sub-title">Fullscreen graph details</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" (click)="closeChartModal()" title="Close Graph">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+      
+      <!-- Body -->
+      <div class="chart-modal-body">
+        <app-chart-renderer [chartConfig]="activeModalChartMessage.chart" height="420px"></app-chart-renderer>
       </div>
     </div>
   </div>

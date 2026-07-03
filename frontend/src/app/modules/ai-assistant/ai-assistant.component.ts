@@ -38,6 +38,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
   messages: Message[] = [];
   isLoading: boolean = false;
   activeModalMessage: Message | null = null;
+  activeModalChartMessage: Message | null = null;
   private chatSubscription?: Subscription;
 
   suggestionChips = [
@@ -452,5 +453,13 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
 
   closeTableModal() {
     this.activeModalMessage = null;
+  }
+
+  openChartModal(msg: Message) {
+    this.activeModalChartMessage = msg;
+  }
+
+  closeChartModal() {
+    this.activeModalChartMessage = null;
   }
 }

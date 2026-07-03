@@ -10,14 +10,13 @@ Chart.register(...registerables);
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="chart-canvas-wrapper">
+    <div class="chart-canvas-wrapper" [style.height]="height">
       <canvas #chartCanvas></canvas>
     </div>
   `,
   styles: [`
     .chart-canvas-wrapper {
       position: relative;
-      height: 220px;
       width: 100%;
       padding: 8px 4px;
       margin-top: 10px;
@@ -31,6 +30,8 @@ Chart.register(...registerables);
 export class ChartRendererComponent implements OnDestroy, AfterViewInit {
   @ViewChild('chartCanvas') private chartCanvas!: ElementRef<HTMLCanvasElement>;
   
+  @Input() height: string = '220px';
+
   @Input() chartConfig!: {
     type: string;
     labels: string[];
