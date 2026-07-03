@@ -35,6 +35,13 @@
       filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.25));
     }
 
+    .bot-icon-img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
     .title {
       font-size: 1.05rem;
       font-weight: 600;
@@ -74,14 +81,17 @@
       font-size: 15px;
     }
 
+    .material-icons-outlined {
+      transition: transform 0.4s ease;
+    }
+
     &:hover {
       background: rgba(239, 68, 68, 0.2);
       border-color: rgba(239, 68, 68, 0.4);
       color: #ffcdd2;
 
-      span {
+      .material-icons-outlined {
         transform: rotate(-180deg);
-        transition: transform 0.4s ease;
       }
     }
   }
@@ -158,6 +168,13 @@
     span {
       font-size: 16px;
     }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 50%;
+    }
   }
 
   .message-bubble {
@@ -210,6 +227,11 @@
       background: var(--primary-light, #e3f2fd);
       border: 1px solid var(--item-badge-border, #90caf9);
       color: var(--primary, #1565c0);
+
+      &:has(.avatar-img) {
+        background: transparent;
+        border: none;
+      }
     }
 
     .message-bubble {
