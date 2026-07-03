@@ -34,16 +34,117 @@
           </div>
 
           <!-- Content block -->
-          <div class="message-bubble">
-            <div class="message-text">{{ msg.text }}</div>
+          <div class="message-content-wrapper">
+            <div class="message-bubble">
+              <div class="message-text">{{ msg.text }}</div>
 
-            @if (msg.chart) {
-              <div class="chart-container">
-                <app-chart-renderer [chartConfig]="msg.chart"></app-chart-renderer>
+              @if (msg.chart) {
+                <div class="chart-container">
+                  <app-chart-renderer [chartConfig]="msg.chart"></app-chart-renderer>
+                </div>
+              }
+
+              @if (msg.data || msg.parsedData) {
+                <div class="results-block">
+                  <div class="results-header">
+                    <div class="results-title">
+                      <span class="material-icons-outlined results-icon">table_chart</span>
+                      <span>Results ({{ (msg.data || msg.parsedData)?.length }} rows)</span>
+                    </div>
+                    
+                    <div class="results-search">
+                      <span class="material-icons-outlined search-icon">search</span>
+                      <input 
+                        type="text" 
+                        [(ngModel)]="msg.filterText" 
+                        placeholder="Filter..."
+                        class="table-search-input"
+                      />
+                    </div>
+
+                    <div class="results-toolbar">
+                      <button 
+                        class="toolbar-btn" 
+                        (click)="exportToCsv(msg.data || msg.parsedData || [], 'export_results.csv')" 
+                        title="Export CSV"
+                      >
+                        <span class="material-icons-outlined">text_snippet</span>
+                      </button>
+                      <button 
+                        class="toolbar-btn" 
+                        (click)="exportToExcel(msg.data || msg.parsedData || [], 'export_results.xlsx')" 
+                        title="Export to Excel"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="9" y1="13" x2="15" y2="17" />
+                          <line x1="15" y1="13" x2="9" y2="17" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="results-table-wrapper">
+                    <table class="dynamic-results-table">
+                      <thead>
+                        <tr>
+                          @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
+                            <th (click)="toggleSort(msg, header)" class="sortable-header">
+                              <div class="header-cell-content">
+                                <span>{{ header }}</span>
+                                @if (msg.sortColumn === header) {
+                                  <span class="material-icons sort-arrow">
+                                    {{ msg.sortAscending ? 'arrow_upward' : 'arrow_downward' }}
+                                  </span>
+                                }
+                              </div>
+                            </th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of getFilteredData(msg); track row) {
+                          <tr>
+                            @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
+                              <td>{{ row[header] }}</td>
+                            }
+                          </tr>
+                        }
+                        @if (getFilteredData(msg).length === 0) {
+                          <tr>
+                            <td [attr.colspan]="getTableHeaders(msg.data || msg.parsedData || []).length" class="no-results-td">
+                              No matching records found.
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              }
+
+              <span class="timestamp">{{ msg.timestamp | date:'shortTime' }}</span>
+            </div>
+
+            <!-- Bubble Hover Actions -->
+            @if (msg.sender === 'ai') {
+              <div class="bubble-hover-actions">
+                <button class="action-btn" (click)="exportMessageText(msg)" title="Export Message text">
+                  <span class="material-icons-outlined">download</span>
+                </button>
+                @if (msg.data || msg.parsedData) {
+                  <button class="action-btn" (click)="exportToExcel(msg.data || msg.parsedData || [], 'export_results.xlsx')" title="Export Excel">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="9" y1="13" x2="15" y2="17" />
+                      <line x1="15" y1="13" x2="9" y2="17" />
+                    </svg>
+                  </button>
+                }
               </div>
             }
-
-            <span class="timestamp">{{ msg.timestamp | date:'shortTime' }}</span>
           </div>
         </div>
       }
