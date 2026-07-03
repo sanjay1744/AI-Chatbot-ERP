@@ -1,0 +1,6 @@
+@AriyAI.ERP.Api_HostAddress = http://localhost:5022
+
+GET {{AriyAI.ERP.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

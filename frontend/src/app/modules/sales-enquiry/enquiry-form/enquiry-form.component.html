@@ -1,0 +1,248 @@
+<div class="page">
+  <!-- Back + Title -->
+  <div class="page-title-row" style="margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button class="back-link" (click)="cancel()">
+        <span class="material-icons-outlined">arrow_back</span>
+      </button>
+      <h1 class="page-title">{{ isEditMode ? 'EDIT SALES ENQUIRY' : 'NEW SALES ENQUIRY' }}</h1>
+    </div>
+  </div>
+
+  <!-- Accent Divider -->
+  <div class="accent-divider"></div>
+
+  <!-- Tabs -->
+  <div class="form-tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'general'" (click)="selectTab('general')">General Info</button>
+    <button class="tab-btn" [class.active]="activeTab === 'products'" (click)="selectTab('products')">Product List</button>
+    <button class="tab-btn" [class.active]="activeTab === 'contacts'" (click)="selectTab('contacts')">Contacts</button>
+    <button class="tab-btn" [class.active]="activeTab === 'ocr'" (click)="selectTab('ocr')">Image OCR</button>
+  </div>
+
+  <!-- TAB: General Info -->
+  <div class="tab-body" *ngIf="activeTab === 'general'">
+    <!-- Row 1: Enquiry Number, Enquiry Date, Source, Lead Type -->
+    <div class="form-row cols-4">
+      <div class="field-outlined">
+        <label>Enquiry Number</label>
+        <input type="text" [value]="enquiry.enquiryNumber" disabled />
+      </div>
+      <div class="field-outlined">
+        <label>Enquiry Date*</label>
+        <input type="date" [(ngModel)]="enquiry.enquiryDate" />
+      </div>
+      <div class="field-outlined">
+        <label>Source</label>
+        <select [(ngModel)]="enquiry.source">
+          <option value="Agent">Agent</option>
+          <option value="Direct">Direct</option>
+          <option value="Website">Website</option>
+          <option value="Email">Email</option>
+        </select>
+      </div>
+      <div class="field-outlined">
+        <label>Lead Type*</label>
+        <select [(ngModel)]="enquiry.leadType">
+          <option value="Cold">Cold</option>
+          <option value="Warm">Warm</option>
+          <option value="Hot">Hot</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 2: Customer, Address -->
+    <div class="form-row cols-2">
+      <div class="field-outlined">
+        <label>Customer*</label>
+        <select [(ngModel)]="enquiry.customerId" (change)="onCustomerChange()">
+          <option [value]="0"></option>
+          <option *ngFor="let cust of customers" [value]="cust.id">{{ cust.name }}</option>
+        </select>
+      </div>
+      <div class="field-outlined">
+        <label>Address</label>
+        <input type="text" [(ngModel)]="enquiry.address" />
+      </div>
+    </div>
+
+    <!-- Row 3: Assign To, Expiry, Country -->
+    <div class="form-row cols-3">
+      <div class="field-outlined">
+        <label>Assign To*</label>
+        <select [(ngModel)]="enquiry.assignToId">
+          <option [value]="undefined"></option>
+          <option *ngFor="let ag of agents" [value]="ag.id">{{ ag.name }}</option>
+        </select>
+      </div>
+      <div class="field-outlined">
+        <label>Enquiry Expiry On</label>
+        <input type="date" [(ngModel)]="enquiry.expiryDate" />
+      </div>
+      <div class="field-outlined">
+        <label>Customer Country</label>
+        <input type="text" [(ngModel)]="enquiry.customerCountry" />
+      </div>
+    </div>
+
+    <!-- Remarks -->
+    <div class="field-outlined" style="margin-top: 8px;">
+      <label>Remarks</label>
+      <textarea rows="3" [(ngModel)]="enquiry.remarks"></textarea>
+    </div>
+    <div class="char-count">{{ enquiry.remarks.length }}/500</div>
+  </div>
+
+  <!-- TAB: Product List -->
+  <div class="tab-body" *ngIf="activeTab === 'products'">
+    <div class="section-header">
+      <h3 class="section-title">PRODUCT DETAILS</h3>
+      <div class="section-actions">
+        <div class="inline-search">
+          <span class="material-icons-outlined icon-sm">search</span>
+          <input type="text" placeholder="Search" />
+        </div>
+        <button class="btn btn-outline btn-sm">
+          <span class="material-icons-outlined icon-sm">file_download</span> Template
+        </button>
+        <button class="btn btn-outline btn-sm">
+          <span class="material-icons-outlined icon-sm">upload</span> Import
+        </button>
+        <button class="btn btn-primary btn-sm" (click)="openAddProductModal()">
+          <span class="material-icons-outlined icon-sm">add</span> New Item
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th style="width: 40px">#</th>
+            <th>Group</th>
+            <th>Product Description</th>
+            <th>Part Number</th>
+            <th>Make</th>
+            <th>Model</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of enquiry.enquiryProducts; let idx = index">
+            <td>{{ idx + 1 }}</td>
+            <td>{{ item.group }}</td>
+            <td>{{ item.productDescription }}</td>
+            <td>{{ item.partNumber || '—' }}</td>
+            <td>{{ item.make || '—' }}</td>
+            <td>{{ item.model || '—' }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.rate | number:'1.2-2' }}</td>
+            <td style="text-align: center;">
+              <button class="icon-action-btn delete" (click)="removeProductItem(idx)">
+                <span class="material-icons-outlined icon-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="enquiry.enquiryProducts.length === 0">
+            <td colspan="9" class="empty-state">No products added. Click "New Item" to add.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Product Pagination -->
+    <div class="pagination">
+      <div class="page-size">
+        <span>Items per page:</span>
+        <select class="form-control page-size-select"><option>10</option></select>
+      </div>
+      <span class="page-info">0 of 0</span>
+      <div class="page-buttons">
+        <button class="pg-btn" disabled>|&lt;</button>
+        <button class="pg-btn" disabled>&lt;</button>
+        <button class="pg-btn" disabled>&gt;</button>
+        <button class="pg-btn" disabled>&gt;|</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Contacts -->
+  <div class="tab-body" *ngIf="activeTab === 'contacts'">
+    <div class="info-card">
+      <h4>Primary Contact Info</h4>
+      <p><strong>Contact Person:</strong> Thalaimalai Naren</p>
+      <p><strong>Department:</strong> Marketing & Procurement</p>
+      <p><strong>Phone:</strong> +91 9443210987</p>
+      <p><strong>Email:</strong> naren.procure&#64;manjunatha.com</p>
+    </div>
+  </div>
+
+  <!-- TAB: Image OCR -->
+  <div class="tab-body" *ngIf="activeTab === 'ocr'">
+    <div class="ocr-panel">
+      <h3 style="margin-bottom: 12px;">Intelligent OCR Product Extraction</h3>
+      <p class="ocr-desc">Upload a scan or image of the customer's enquiry to auto-extract products.</p>
+
+      <div class="upload-zone">
+        <input type="file" (change)="onOcrFileChange($event)" accept="image/*,application/pdf" />
+        <span class="material-icons-outlined" style="font-size: 36px; color: var(--text-hint);">cloud_upload</span>
+        <p *ngIf="!ocrFile">Drag & Drop or Click to Upload</p>
+        <p *ngIf="ocrFile" style="font-weight: 600; color: var(--primary);">{{ ocrFile.name }}</p>
+      </div>
+
+      <button class="btn btn-primary" style="margin-top: 16px;" [disabled]="!ocrFile || isOcrProcessing" (click)="runOcrScan()">
+        <span class="material-icons-outlined icon-sm">{{ isOcrProcessing ? 'hourglass_top' : 'bolt' }}</span>
+        {{ isOcrProcessing ? 'Processing...' : 'Run OCR Scan' }}
+      </button>
+
+      <div class="ocr-result" *ngIf="ocrResult">
+        <p><strong>Result:</strong> {{ ocrResult }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Actions -->
+  <div class="form-actions-bar">
+    <button class="btn btn-outline" (click)="cancel()">Cancel</button>
+    <button class="btn btn-primary" (click)="saveEnquiry()">
+      <span class="material-icons-outlined icon-sm">save</span> Save
+    </button>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal-overlay" *ngIf="showProductModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Add New Item</h3>
+      <button class="modal-close" (click)="showProductModal = false">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-outlined" style="margin-bottom: 16px;">
+        <label>Select Product*</label>
+        <select [(ngModel)]="selectedProductId" (change)="onProductSelect()">
+          <option [value]="null">Select product...</option>
+          <option *ngFor="let prod of products" [value]="prod.id">
+            [{{ prod.group }}] {{ prod.description }} — Rate: {{ prod.rate }}
+          </option>
+        </select>
+      </div>
+      <div class="form-row cols-2">
+        <div class="field-outlined">
+          <label>Quantity*</label>
+          <input type="number" [(ngModel)]="newProductQty" min="1" />
+        </div>
+        <div class="field-outlined">
+          <label>Rate (INR)*</label>
+          <input type="number" [(ngModel)]="newProductRate" min="0" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="showProductModal = false">Cancel</button>
+      <button class="btn btn-primary" [disabled]="!selectedProductId" (click)="addProductItem()">Add Item</button>
+    </div>
+  </div>
+</div>

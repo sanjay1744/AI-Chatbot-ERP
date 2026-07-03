@@ -25,6 +25,11 @@ obj/
 *.exe
 *.pdb
 
+# SQLite temp files
+*.db-shm
+*.db-wal
+*.db-journal
+
 # Python
 __pycache__/
 *.py[cod]
@@ -42,6 +47,10 @@ ENV/
 .env.test.local
 .env.production.local
 *.secret
+key.json
+keys.json
+credentials.json
+appsettings.local.json
 
 # IDEs & OS Files
 .vscode/

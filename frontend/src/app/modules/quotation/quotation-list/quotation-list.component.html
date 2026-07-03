@@ -1,0 +1,150 @@
+<div class="page">
+  <!-- Page Title Row -->
+  <div class="page-title-row">
+    <h1 class="page-title">QUOTATIONS</h1>
+    <div class="title-actions">
+      <button class="btn btn-outline btn-sm">
+        <span class="material-icons-outlined icon-sm">settings</span> Export Setting
+      </button>
+      <button class="btn btn-success btn-sm">
+        <span class="material-icons-outlined icon-sm">file_download</span> Export
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="addNew()">
+        <span class="material-icons-outlined icon-sm">add</span> Add New
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Row 1: Status + Dates + Customer -->
+  <div class="grid-filter-panel">
+    <div class="filter-field" style="width: 160px;">
+      <fieldset>
+        <legend>Status</legend>
+      </fieldset>
+      <select class="form-control" [(ngModel)]="status" (change)="loadQuotations()">
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Sent">Sent</option>
+        <option value="Rejected">Rejected</option>
+        <option value="All">All</option>
+      </select>
+    </div>
+
+    <div class="filter-field" style="width: 150px;">
+      <fieldset>
+        <legend>From Date*</legend>
+      </fieldset>
+      <input type="date" class="form-control" [(ngModel)]="fromDate" />
+    </div>
+
+    <div class="filter-field" style="width: 150px;">
+      <fieldset>
+        <legend>To Date*</legend>
+      </fieldset>
+      <input type="date" class="form-control" [(ngModel)]="toDate" />
+    </div>
+
+    <div class="filter-field" style="flex: 1; min-width: 200px;">
+      <fieldset>
+        <legend>Customer</legend>
+      </fieldset>
+      <select class="form-control" [(ngModel)]="selectedCustomerId">
+        <option [value]="null"></option>
+        <option *ngFor="let cust of customers" [value]="cust.id">{{ cust.name }}</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" (click)="onSearch()">
+      <span class="material-icons-outlined icon-sm">search</span> Search
+    </button>
+  </div>
+
+  <!-- Filter Row 2: Grid Filter -->
+  <div class="filter-row-2">
+    <div class="grid-filter-box">
+      <span class="material-icons-outlined icon-sm" style="color: var(--text-hint);">filter_alt</span>
+      <input type="text" class="grid-filter-input" placeholder="Grid Filter" [(ngModel)]="gridFilter" />
+    </div>
+    <span class="record-count">{{ recordsCount }} record(s)</span>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <table class="erp-table">
+      <thead>
+        <tr>
+          <th>Quotation Number</th>
+          <th>Quotation Date</th>
+          <th>Customer Name</th>
+          <th>Agent</th>
+          <th>State</th>
+          <th>Items</th>
+          <th>Aging</th>
+          <th>Status</th>
+          <th style="width: 180px; text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let q of quotations">
+          <td>{{ q.quotationNumber }}</td>
+          <td>{{ q.quotationDate }}</td>
+          <td>{{ q.customerName }}</td>
+          <td>{{ q.agent }}</td>
+          <td>{{ q.state }}</td>
+          <td>
+            <span class="badge badge-item">{{ q.itemsCount }}</span>
+          </td>
+          <td>{{ q.aging }}</td>
+          <td>
+            <span class="badge" [ngClass]="{
+              'badge-pending': q.status === 'Pending',
+              'badge-approved': q.status === 'Approved',
+              'badge-rejected': q.status === 'Rejected'
+            }">{{ q.status }}</span>
+          </td>
+          <td style="text-align: center;">
+            <div class="actions-grid-buttons">
+              <button class="grid-act-btn edit" title="Edit" (click)="editQuotation(q.id)">
+                <span class="material-icons-outlined icon-xs">edit</span>
+              </button>
+              <button class="grid-act-btn del" title="Delete" (click)="deleteQuotation(q.id)">
+                <span class="material-icons-outlined icon-xs">delete</span>
+              </button>
+              <button class="grid-act-btn view" title="View" (click)="viewQuotation(q.id)">
+                <span class="material-icons-outlined icon-xs">visibility</span>
+              </button>
+              <button class="grid-act-btn print" title="Print" (click)="printQuotation(q.id)">
+                <span class="material-icons-outlined icon-xs">print</span>
+              </button>
+              <button class="grid-act-btn phone" title="Follow-up" (click)="logFollowUp(q.id)">
+                <span class="material-icons-outlined icon-xs">call</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="quotations.length === 0">
+          <td colspan="9" class="empty-state">No quotations found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <div class="page-size">
+      <span>Items per page:</span>
+      <select class="form-control page-size-select">
+        <option>20</option>
+        <option>50</option>
+        <option>100</option>
+      </select>
+    </div>
+    <span class="page-info">1 - {{ quotations.length }} of {{ recordsCount }}</span>
+    <div class="page-buttons">
+      <button class="pg-btn" disabled>|&lt;</button>
+      <button class="pg-btn" disabled>&lt;</button>
+      <button class="pg-btn" disabled>&gt;</button>
+      <button class="pg-btn" disabled>&gt;|</button>
+    </div>
+  </div>
+</div>

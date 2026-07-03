@@ -1,0 +1,99 @@
+<div class="ai-chat-container">
+  <!-- Chat Header -->
+  <div class="chat-header">
+    <div class="header-title-block">
+      <span class="material-icons-outlined bot-icon">smart_toy</span>
+      <div>
+        <h2 class="title">AriyAI Copilot</h2>
+        <p class="subtitle">Intelligent Manufacturing Database Assistant</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="clear-btn" (click)="clearChat()" title="Reset Conversation">
+        <span class="material-icons-outlined">refresh</span>
+        <span>Clear</span>
+      </button>
+      <button class="close-btn" (click)="closeCopilot()" title="Close Copilot">
+        <span class="material-icons-outlined">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages Scroll Area -->
+  <div class="chat-messages-container" #chatScrollContainer>
+    <div class="messages-list">
+      @for (msg of messages; track msg.timestamp) {
+        <div class="message-wrapper" [class.user-msg]="msg.sender === 'user'" [class.ai-msg]="msg.sender === 'ai'">
+          <!-- Icon avatar -->
+          <div class="avatar">
+            @if (msg.sender === 'user') {
+              <span class="material-icons-outlined">person</span>
+            } @else {
+              <span class="material-icons-outlined">smart_toy</span>
+            }
+          </div>
+
+          <!-- Content block -->
+          <div class="message-bubble">
+            <div class="message-text">{{ msg.text }}</div>
+
+            @if (msg.chart) {
+              <div class="chart-container">
+                <app-chart-renderer [chartConfig]="msg.chart"></app-chart-renderer>
+              </div>
+            }
+
+            <span class="timestamp">{{ msg.timestamp | date:'shortTime' }}</span>
+          </div>
+        </div>
+      }
+
+      <!-- Typing indicator -->
+      @if (isLoading) {
+        <div class="message-wrapper ai-msg loading-msg">
+          <div class="avatar">
+            <span class="material-icons-outlined">smart_toy</span>
+          </div>
+          <div class="message-bubble typing-bubble">
+            <div class="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Suggestion Chips -->
+  <div class="suggestions-container" *ngIf="messages.length === 1 && !isLoading">
+    <div class="suggestions-label">Try asking:</div>
+    <div class="chips-list">
+      @for (chip of suggestionChips; track chip) {
+        <button class="chip" (click)="selectChip(chip)">
+          {{ chip }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Chat Input Footer -->
+  <div class="chat-input-footer">
+    <form (ngSubmit)="sendMessage(userInput)" class="input-form">
+      <input 
+        #chatInput
+        type="text" 
+        name="userInput"
+        class="chat-input" 
+        [(ngModel)]="userInput" 
+        placeholder="Ask a question about sales, products, agents, or customers..."
+        [disabled]="isLoading"
+        autocomplete="off"
+      />
+      <button type="submit" class="send-btn" [disabled]="!userInput.trim() || isLoading">
+        <span class="material-icons-outlined">send</span>
+      </button>
+    </form>
+  </div>
+</div>
