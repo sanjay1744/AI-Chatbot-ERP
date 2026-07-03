@@ -10,11 +10,7 @@
 
 <!-- Floating Action Button (FAB) -->
 <button class="copilot-fab" [class.active]="copilotState.isOpen()" (click)="toggleCopilot()" title="AriyAI Copilot">
-  @if (copilotState.isOpen()) {
-    <span class="material-icons-outlined">close</span>
-  } @else {
-    <img src="copilot-logo.svg" class="fab-logo-img" alt="Copilot" />
-  }
+  <img src="copilot-logo.svg" class="fab-logo-img" alt="Copilot" />
 </button>
 
 <!-- Global Floating Copilot Popup -->
