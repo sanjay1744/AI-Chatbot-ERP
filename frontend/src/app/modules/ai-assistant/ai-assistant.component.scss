@@ -35,6 +35,13 @@
       filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.25));
     }
 
+    .bot-icon-img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
     .title {
       font-size: 1.05rem;
       font-weight: 600;
@@ -74,14 +81,17 @@
       font-size: 15px;
     }
 
+    .material-icons-outlined {
+      transition: transform 0.4s ease;
+    }
+
     &:hover {
       background: rgba(239, 68, 68, 0.2);
       border-color: rgba(239, 68, 68, 0.4);
       color: #ffcdd2;
 
-      span {
+      .material-icons-outlined {
         transform: rotate(-180deg);
-        transition: transform 0.4s ease;
       }
     }
   }
@@ -158,6 +168,13 @@
     span {
       font-size: 16px;
     }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 50%;
+    }
   }
 
   .message-bubble {
@@ -210,6 +227,11 @@
       background: var(--primary-light, #e3f2fd);
       border: 1px solid var(--item-badge-border, #90caf9);
       color: var(--primary, #1565c0);
+
+      &:has(.avatar-img) {
+        background: transparent;
+        border: none;
+      }
     }
 
     .message-bubble {
@@ -385,9 +407,9 @@
     flex: 1;
     background: #ffffff;
     border: 1px solid var(--border, #e0e0e0);
-    border-radius: 6px;
-    padding: 10px 14px;
-    padding-right: 42px;
+    border-radius: 24px;
+    padding: 10px 18px;
+    padding-right: 46px;
     color: var(--text-primary, #212121);
     font-size: 0.85rem;
     font-family: inherit;
@@ -408,12 +430,12 @@
 
   .send-btn {
     position: absolute;
-    right: 6px;
+    right: 5px;
     top: 50%;
     transform: translateY(-50%);
     background: linear-gradient(135deg, var(--primary, #1565c0) 0%, var(--primary-dark, #0d47a1) 100%);
     border: none;
-    border-radius: 4px;
+    border-radius: 50%;
     width: 30px;
     height: 30px;
     display: flex;
@@ -436,6 +458,33 @@
       background: #e2e8f0;
       color: #a0aec0;
       cursor: not-allowed;
+    }
+  }
+
+  .stop-btn {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #ef5350 0%, #c62828 100%);
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    span {
+      font-size: 16px;
+    }
+
+    &:hover {
+      box-shadow: 0 2px 6px rgba(239, 83, 80, 0.35);
+      filter: brightness(1.05);
     }
   }
 }

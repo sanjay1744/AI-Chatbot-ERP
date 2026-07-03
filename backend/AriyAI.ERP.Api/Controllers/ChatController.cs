@@ -44,7 +44,7 @@ namespace AriyAI.ERP.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Ask([FromBody] ChatRequest request)
+        public async Task<IActionResult> Ask([FromBody] ChatRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Message))
             {
@@ -54,7 +54,7 @@ namespace AriyAI.ERP.Api.Controllers
             try
             {
                 // Step 1: Text-to-SQL or Direct Conversation via LLM
-                string modelOutput = await GenerateSqlFromMessageAsync(request.Message, request.History);
+                string modelOutput = await GenerateSqlFromMessageAsync(request.Message, request.History, cancellationToken);
 
                 if (string.IsNullOrWhiteSpace(modelOutput))
                 {
@@ -104,13 +104,13 @@ namespace AriyAI.ERP.Api.Controllers
                 var queryResults = new List<Dictionary<string, object>>();
                 using (var connection = new SqliteConnection("Data Source=ExcelInMemory;Mode=Memory;Cache=Shared"))
                 {
-                    await connection.OpenAsync();
+                    await connection.OpenAsync(cancellationToken);
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText = sqlQuery;
-                        using (var reader = await command.ExecuteReaderAsync())
+                        using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                         {
-                            while (await reader.ReadAsync())
+                            while (await reader.ReadAsync(cancellationToken))
                             {
                                 var row = new Dictionary<string, object>();
                                 for (int i = 0; i < reader.FieldCount; i++)
@@ -125,7 +125,7 @@ namespace AriyAI.ERP.Api.Controllers
 
                 // Step 3: Synthesis of final natural response
                 string resultsJson = JsonSerializer.Serialize(queryResults);
-                string reply = await SynthesizeAnswerAsync(request.Message, sqlQuery, resultsJson, request.History);
+                string reply = await SynthesizeAnswerAsync(request.Message, sqlQuery, resultsJson, request.History, cancellationToken);
 
                 var chartConfig = DetectAndBuildChart(sqlQuery, queryResults, request.Message);
 
@@ -364,7 +364,7 @@ namespace AriyAI.ERP.Api.Controllers
             return string.Empty;
         }
 
-        private async Task<string> GenerateSqlFromMessageAsync(string message, List<ChatMessageDto> history)
+        private async Task<string> GenerateSqlFromMessageAsync(string message, List<ChatMessageDto> history, CancellationToken cancellationToken)
         {
             var historyBuilder = new StringBuilder();
             if (history != null && history.Count > 0)
@@ -434,10 +434,10 @@ SQL RULES & TIPS:
 - COMPARE THEM: If asked to compare two entities (e.g. ""compare them"" or ""compare Ayush and Vashishtha""), be consistent with the previous conversation's context. If they exist in both roles, compare them across both roles or match the previous conversation's intent. Do not randomly switch columns (e.g., do not switch from CustomerName to AgentName). Use GROUP BY appropriately.";
 
             var fullText = $"{systemPrompt}\n\n{historyBuilder}User Query: {message}\nAnswer/SQL:";
-            return await CallOllamaApiAsync(fullText, temperature: 0.0, numPredict: 200);
+            return await CallOllamaApiAsync(fullText, temperature: 0.0, numPredict: 200, cancellationToken: cancellationToken);
         }
 
-        private async Task<string> SynthesizeAnswerAsync(string message, string sql, string dataJson, List<ChatMessageDto> history)
+        private async Task<string> SynthesizeAnswerAsync(string message, string sql, string dataJson, List<ChatMessageDto> history, CancellationToken cancellationToken)
         {
             var historyBuilder = new StringBuilder();
             if (history != null && history.Count > 0)
@@ -477,10 +477,10 @@ CRITICAL INSTRUCTIONS:
 
 Direct Answer:";
 
-            return await CallOllamaApiAsync(prompt, temperature: 0.2, numPredict: 150);
+            return await CallOllamaApiAsync(prompt, temperature: 0.2, numPredict: 150, cancellationToken: cancellationToken);
         }
 
-        private async Task<string> CallOllamaApiAsync(string prompt, double temperature = 0.0, int numPredict = -1, int numCtx = 2048)
+        private async Task<string> CallOllamaApiAsync(string prompt, double temperature = 0.0, int numPredict = -1, int numCtx = 2048, CancellationToken cancellationToken = default)
         {
             string baseUrl = _configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
             string model = Environment.GetEnvironmentVariable("OLLAMA_MODEL");
@@ -506,7 +506,7 @@ Direct Answer:";
             var json = JsonSerializer.Serialize(requestBody);
             var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(url, httpContent);
+            var response = await _httpClient.PostAsync(url, httpContent, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync();

@@ -1,6 +1,7 @@
-import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { CopilotStateService } from '../../services/copilot-state.service';
 import { ChartRendererComponent } from './chart-renderer/chart-renderer.component';
@@ -21,7 +22,7 @@ interface Message {
   templateUrl: './ai-assistant.component.html',
   styleUrls: ['./ai-assistant.component.scss']
 })
-export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterViewInit {
+export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterViewInit, OnDestroy {
   private apiService = inject(ApiService);
   private cdr = inject(ChangeDetectorRef);
   private copilotStateService = inject(CopilotStateService);
@@ -32,6 +33,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
   userInput: string = '';
   messages: Message[] = [];
   isLoading: boolean = false;
+  private chatSubscription?: Subscription;
 
   suggestionChips = [
     'What are the total sales across all records?',
@@ -89,7 +91,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
       .slice(0, -1)
       .map(m => ({ sender: m.sender, text: m.text }));
 
-    this.apiService.postChatMessage(userMessage, history).subscribe({
+    this.chatSubscription = this.apiService.postChatMessage(userMessage, history).subscribe({
       next: (res) => {
         this.messages.push({
           sender: 'ai',
@@ -100,6 +102,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
           timestamp: new Date()
         });
         this.isLoading = false;
+        this.chatSubscription = undefined;
         this.cdr.detectChanges();
         this.scrollToBottom();
         this.focusInput();
@@ -112,11 +115,35 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
           timestamp: new Date()
         });
         this.isLoading = false;
+        this.chatSubscription = undefined;
         this.cdr.detectChanges();
         this.scrollToBottom();
         this.focusInput();
       }
     });
+  }
+
+  stopChat() {
+    if (this.chatSubscription) {
+      this.chatSubscription.unsubscribe();
+      this.chatSubscription = undefined;
+    }
+    this.isLoading = false;
+    this.messages.push({
+      sender: 'ai',
+      text: 'Process stopped by user.',
+      timestamp: new Date()
+    });
+    this.cdr.detectChanges();
+    this.scrollToBottom();
+    this.focusInput();
+  }
+
+  ngOnDestroy() {
+    if (this.chatSubscription) {
+      this.chatSubscription.unsubscribe();
+      this.chatSubscription = undefined;
+    }
   }
 
   selectChip(chip: string) {
