@@ -23,6 +23,10 @@
     transition: transform 0.3s ease;
   }
 
+  svg {
+    transition: transform 0.3s ease;
+  }
+
   .fab-logo-img {
     width: 38px;
     height: 38px;
@@ -40,15 +44,11 @@
   }
 
   &.active {
-    background: #e53935; // Red close button when active
-    box-shadow: 0 4px 16px rgba(229, 57, 53, 0.35);
-
-    span {
-      transform: rotate(90deg);
-    }
+    background: linear-gradient(135deg, var(--sidebar-bg, #1a3a5c) 0%, var(--sidebar-hover, #1e4670) 100%);
+    box-shadow: 0 4px 20px rgba(26, 58, 92, 0.35);
 
     &:hover {
-      box-shadow: 0 6px 20px rgba(229, 57, 53, 0.45);
+      box-shadow: 0 6px 24px rgba(26, 58, 92, 0.45);
     }
   }
 }
