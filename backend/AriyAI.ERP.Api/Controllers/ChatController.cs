@@ -127,11 +127,14 @@ namespace AriyAI.ERP.Api.Controllers
                 string resultsJson = JsonSerializer.Serialize(queryResults);
                 string reply = await SynthesizeAnswerAsync(request.Message, sqlQuery, resultsJson, request.History);
 
+                var chartConfig = DetectAndBuildChart(sqlQuery, queryResults);
+
                 return Ok(new
                 {
                     reply = reply,
                     sql = sqlQuery,
-                    data = queryResults
+                    data = queryResults,
+                    chart = chartConfig
                 });
             }
             catch (HttpRequestException httpEx)
@@ -587,6 +590,173 @@ Direct Answer:";
             public string model { get; set; } = string.Empty;
             public string response { get; set; } = string.Empty;
             public bool done { get; set; }
+        }
+
+        public class ChartDatasetDto
+        {
+            public string Label { get; set; } = string.Empty;
+            public List<double> Data { get; set; } = new();
+            public List<string>? BackgroundColor { get; set; }
+            public List<string>? BorderColor { get; set; }
+            public double BorderWidth { get; set; } = 1;
+            public bool Fill { get; set; } = false;
+        }
+
+        public class ChartConfigDto
+        {
+            public string Type { get; set; } = "bar";
+            public List<string> Labels { get; set; } = new();
+            public List<ChartDatasetDto> Datasets { get; set; } = new();
+        }
+
+        private ChartConfigDto? DetectAndBuildChart(string sqlQuery, List<Dictionary<string, object>> results)
+        {
+            if (results == null || results.Count < 2)
+            {
+                return null;
+            }
+
+            var firstRow = results[0];
+            string? labelColumn = null;
+            string? valueColumn = null;
+
+            foreach (var kvp in firstRow)
+            {
+                var val = kvp.Value;
+                if (val == null) continue;
+
+                var colNameUpper = kvp.Key.ToUpperInvariant();
+                bool isNumeric = val is short || val is int || val is long || val is float || val is double || val is decimal;
+
+                if (!isNumeric && double.TryParse(val.ToString(), out _))
+                {
+                    isNumeric = true;
+                }
+
+                if (isNumeric)
+                {
+                    if (colNameUpper != "ID" && !colNameUpper.EndsWith("ID"))
+                    {
+                        valueColumn = kvp.Key;
+                    }
+                }
+                else
+                {
+                    if (colNameUpper.Contains("NAME") || colNameUpper.Contains("DATE") || colNameUpper.Contains("ITEM") || colNameUpper.Contains("MONTH") || colNameUpper.Contains("ROLE"))
+                    {
+                        labelColumn = kvp.Key;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(valueColumn))
+            {
+                foreach (var kvp in firstRow)
+                {
+                    var colNameUpper = kvp.Key.ToUpperInvariant();
+                    if (colNameUpper == "ID" || colNameUpper.EndsWith("ID")) continue;
+
+                    if (double.TryParse(kvp.Value?.ToString() ?? "", out _))
+                    {
+                        valueColumn = kvp.Key;
+                        break;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(labelColumn))
+            {
+                foreach (var kvp in firstRow)
+                {
+                    var colNameUpper = kvp.Key.ToUpperInvariant();
+                    if (colNameUpper == "ID" || colNameUpper.EndsWith("ID")) continue;
+
+                    if (!double.TryParse(kvp.Value?.ToString() ?? "", out _))
+                    {
+                        labelColumn = kvp.Key;
+                        break;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(labelColumn) || string.IsNullOrEmpty(valueColumn))
+            {
+                return null;
+            }
+
+            var labels = new List<string>();
+            var dataValues = new List<double>();
+
+            foreach (var row in results)
+            {
+                string labelVal = row.TryGetValue(labelColumn, out var lVal) && lVal != null ? lVal.ToString()! : "Unknown";
+                if (DateTime.TryParse(labelVal, out var parsedDate))
+                {
+                    labelVal = parsedDate.ToString("yyyy-MM-dd");
+                }
+
+                double numVal = 0;
+                if (row.TryGetValue(valueColumn, out var dVal) && dVal != null)
+                {
+                    double.TryParse(dVal.ToString(), out numVal);
+                }
+
+                labels.Add(labelVal);
+                dataValues.Add(numVal);
+            }
+
+            string chartType = "bar";
+            string queryUpper = sqlQuery.ToUpperInvariant();
+
+            if (queryUpper.Contains("DATE") || queryUpper.Contains("MONTH") || queryUpper.Contains("TREND") || queryUpper.Contains("OVER TIME"))
+            {
+                chartType = "line";
+            }
+            else if (results.Count <= 5 && (queryUpper.Contains("SHARE") || queryUpper.Contains("PERCENT") || queryUpper.Contains("DISTRIBUTION") || queryUpper.Contains("BREAKDOWN")))
+            {
+                chartType = "doughnut";
+            }
+
+            var dataset = new ChartDatasetDto
+            {
+                Label = valueColumn,
+                Data = dataValues
+            };
+
+            if (chartType == "line")
+            {
+                dataset.Fill = true;
+                dataset.BorderColor = new List<string> { "#1565c0" };
+                dataset.BackgroundColor = new List<string> { "rgba(21, 101, 192, 0.08)" };
+                dataset.BorderWidth = 2.5;
+            }
+            else if (chartType == "doughnut" || chartType == "pie")
+            {
+                dataset.BackgroundColor = new List<string>
+                {
+                    "#1a3a5c",
+                    "#1565c0",
+                    "#00bcd4",
+                    "#26a69a",
+                    "#ff9800",
+                    "#9c27b0"
+                };
+                dataset.BorderColor = new List<string> { "#ffffff" };
+                dataset.BorderWidth = 1.5;
+            }
+            else
+            {
+                dataset.BackgroundColor = new List<string> { "rgba(21, 101, 192, 0.8)" };
+                dataset.BorderColor = new List<string> { "#1565c0" };
+                dataset.BorderWidth = 1;
+            }
+
+            return new ChartConfigDto
+            {
+                Type = chartType,
+                Labels = labels,
+                Datasets = new List<ChartDatasetDto> { dataset }
+            };
         }
     }
 }

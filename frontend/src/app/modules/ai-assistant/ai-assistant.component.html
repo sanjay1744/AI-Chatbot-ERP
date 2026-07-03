@@ -36,6 +36,13 @@
           <!-- Content block -->
           <div class="message-bubble">
             <div class="message-text">{{ msg.text }}</div>
+
+            @if (msg.chart) {
+              <div class="chart-container">
+                <app-chart-renderer [chartConfig]="msg.chart"></app-chart-renderer>
+              </div>
+            }
+
             <span class="timestamp">{{ msg.timestamp | date:'shortTime' }}</span>
           </div>
         </div>

@@ -3,19 +3,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { CopilotStateService } from '../../services/copilot-state.service';
+import { ChartRendererComponent } from './chart-renderer/chart-renderer.component';
 
 interface Message {
   sender: 'user' | 'ai';
   text: string;
   sql?: string;
   data?: any[];
+  chart?: any;
   timestamp: Date;
 }
 
 @Component({
   selector: 'app-ai-assistant',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ChartRendererComponent],
   templateUrl: './ai-assistant.component.html',
   styleUrls: ['./ai-assistant.component.scss']
 })
@@ -43,7 +45,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
     // Add initial welcome message
     this.messages.push({
       sender: 'ai',
-      text: 'Hello! I am AriyAI, your intelligent Manufacturing Copilot. I have access to the sales database (including 4,200+ invoice lines from `sales.xlsx`), products, agents, customers, and active quotations. \n\nAsk me anything! E.g. *"Show total sales for agent Thalaimalai"* or *"What is the most sold item?"*',
+      text: "Hi! I'm AriyAI, your intelligent ERP & CRM copilot. How can I help you today?",
       timestamp: new Date()
     });
   }
@@ -94,6 +96,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
           text: res.reply || 'Here is the data from the database.',
           sql: res.sql || '',
           data: res.data && res.data.length > 0 ? res.data : undefined,
+          chart: res.chart || undefined,
           timestamp: new Date()
         });
         this.isLoading = false;
