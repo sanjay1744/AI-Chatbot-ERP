@@ -644,6 +644,19 @@ Direct Answer:";
                 return null;
             }
 
+            // Check if the user explicitly asked for visual charts/graphs/plots
+            string msgLower = userMessage.ToLowerInvariant();
+            bool askedForChart = msgLower.Contains("chart") || msgLower.Contains("graph") || 
+                                 msgLower.Contains("plot") || msgLower.Contains("visual") || 
+                                 msgLower.Contains("diagram") || msgLower.Contains("trend") ||
+                                 msgLower.Contains("pie") || msgLower.Contains("donut") || 
+                                 msgLower.Contains("bar") || msgLower.Contains("line");
+                                 
+            if (!askedForChart)
+            {
+                return null;
+            }
+
             var firstRow = results[0];
             string? labelColumn = null;
             string? valueColumn = null;

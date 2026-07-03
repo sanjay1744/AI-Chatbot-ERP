@@ -65,6 +65,13 @@
                     <div class="results-toolbar">
                       <button 
                         class="toolbar-btn" 
+                        (click)="openTableModal(msg)" 
+                        title="View Full Table Properly"
+                      >
+                        <span class="material-icons-outlined">open_in_full</span>
+                      </button>
+                      <button 
+                        class="toolbar-btn" 
                         (click)="exportToCsv(msg.data || msg.parsedData || [], 'export_results.csv')" 
                         title="Export CSV"
                       >
@@ -90,7 +97,7 @@
                       <thead>
                         <tr>
                           @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
-                            <th (click)="toggleSort(msg, header)" class="sortable-header">
+                            <th (click)="openTableModal(msg, header)" class="sortable-header" title="Click to view full table properly">
                               <div class="header-cell-content">
                                 <span>{{ header }}</span>
                                 @if (msg.sortColumn === header) {
@@ -204,3 +211,85 @@
     </form>
   </div>
 </div>
+
+<!-- Dynamic Full-Screen Table Popup Modal -->
+@if (activeModalMessage) {
+  <div class="table-modal-backdrop" (click)="closeTableModal()">
+    <div class="table-modal-content" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="table-modal-header">
+        <div class="modal-title-area">
+          <span class="material-icons-outlined modal-title-icon">table_chart</span>
+          <div>
+            <h3 class="modal-main-title">Data Sheet View</h3>
+            <p class="modal-sub-title">{{ (activeModalMessage.data || activeModalMessage.parsedData)?.length }} entries loaded</p>
+          </div>
+        </div>
+        
+        <!-- Search bar inside Modal -->
+        <div class="modal-search">
+          <span class="material-icons-outlined search-icon">search</span>
+          <input 
+            type="text" 
+            [(ngModel)]="activeModalMessage.filterText" 
+            placeholder="Search records in real-time..."
+            class="modal-search-input"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button class="modal-export-btn" (click)="exportToExcel(activeModalMessage.data || activeModalMessage.parsedData || [], 'export_results.xlsx')" title="Export to Excel">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="9" y1="13" x2="15" y2="17" />
+              <line x1="15" y1="13" x2="9" y2="17" />
+            </svg>
+            <span>Export Excel</span>
+          </button>
+          <button class="modal-close-btn" (click)="closeTableModal()" title="Close Details">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Table Body -->
+      <div class="table-modal-body">
+        <table class="modal-results-table">
+          <thead>
+            <tr>
+              @for (header of getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []); track header) {
+                <th (click)="toggleSort(activeModalMessage, header)" class="sortable-header">
+                  <div class="header-cell-content">
+                    <span>{{ header }}</span>
+                    @if (activeModalMessage.sortColumn === header) {
+                      <span class="material-icons sort-arrow">
+                        {{ activeModalMessage.sortAscending ? 'arrow_upward' : 'arrow_downward' }}
+                      </span>
+                    }
+                  </div>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of getFilteredData(activeModalMessage); track row) {
+              <tr>
+                @for (header of getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []); track header) {
+                  <td>{{ row[header] }}</td>
+                }
+              </tr>
+            }
+            @if (getFilteredData(activeModalMessage).length === 0) {
+              <tr>
+                <td [attr.colspan]="getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []).length" class="no-results-td">
+                  No matching records found.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

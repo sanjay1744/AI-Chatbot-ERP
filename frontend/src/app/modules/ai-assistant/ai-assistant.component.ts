@@ -37,6 +37,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
   userInput: string = '';
   messages: Message[] = [];
   isLoading: boolean = false;
+  activeModalMessage: Message | null = null;
   private chatSubscription?: Subscription;
 
   suggestionChips = [
@@ -440,5 +441,16 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
 
   closeCopilot() {
     this.copilotStateService.close();
+  }
+
+  openTableModal(msg: Message, sortCol?: string) {
+    this.activeModalMessage = msg;
+    if (sortCol) {
+      this.toggleSort(msg, sortCol);
+    }
+  }
+
+  closeTableModal() {
+    this.activeModalMessage = null;
   }
 }
