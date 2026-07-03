@@ -63,36 +63,33 @@
     gap: 8px;
   }
 
-  .clear-btn {
+  .new-chat-btn {
     display: flex;
     align-items: center;
-    gap: 4px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-    padding: 5px 10px;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 6px 8px;
     color: #ffffff;
-    font-size: 0.78rem;
-    font-weight: 500;
     cursor: pointer;
+    border-radius: 6px;
     transition: all 0.2s ease;
 
-    span {
-      font-size: 15px;
-    }
-
-    .material-icons-outlined {
-      transition: transform 0.4s ease;
+    svg {
+      transition: transform 0.2s ease;
     }
 
     &:hover {
-      background: rgba(239, 68, 68, 0.2);
-      border-color: rgba(239, 68, 68, 0.4);
-      color: #ffcdd2;
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.18);
 
-      .material-icons-outlined {
-        transform: rotate(-180deg);
+      svg {
+        transform: scale(1.05);
       }
+    }
+
+    &:active {
+      transform: scale(0.95);
     }
   }
 
@@ -123,28 +120,6 @@
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-  }
-
-  .close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    padding: 6px;
-    color: rgba(255, 255, 255, 0.8);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-
-    span {
-      font-size: 20px;
-    }
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.12);
-      color: #ffffff;
     }
   }
 }
