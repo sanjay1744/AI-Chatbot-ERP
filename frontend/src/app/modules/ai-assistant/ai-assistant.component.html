@@ -91,9 +91,15 @@
         [disabled]="isLoading"
         autocomplete="off"
       />
-      <button type="submit" class="send-btn" [disabled]="!userInput.trim() || isLoading">
-        <span class="material-icons-outlined">send</span>
-      </button>
+      @if (isLoading) {
+        <button type="button" class="stop-btn" (click)="stopChat()" title="Stop Generation">
+          <span class="material-icons">stop</span>
+        </button>
+      } @else {
+        <button type="submit" class="send-btn" [disabled]="!userInput.trim()">
+          <span class="material-icons-outlined">send</span>
+        </button>
+      }
     </form>
   </div>
 </div>

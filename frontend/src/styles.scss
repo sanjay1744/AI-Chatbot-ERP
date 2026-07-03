@@ -1,6 +1,6 @@
 /* ===== AriyAI ERP Global Design System ===== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Outlined');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined');
 
 :root {
   /* Sidebar Navy */
@@ -388,6 +388,7 @@ body {
 }
 
 /* ===== Material Icons Helper ===== */
+.material-icons,
 .material-icons-outlined {
   font-size: 20px;
   vertical-align: middle;
