@@ -127,7 +127,7 @@ namespace AriyAI.ERP.Api.Controllers
                 string resultsJson = JsonSerializer.Serialize(queryResults);
                 string reply = await SynthesizeAnswerAsync(request.Message, sqlQuery, resultsJson, request.History);
 
-                var chartConfig = DetectAndBuildChart(sqlQuery, queryResults);
+                var chartConfig = DetectAndBuildChart(sqlQuery, queryResults, request.Message);
 
                 return Ok(new
                 {
@@ -370,14 +370,14 @@ namespace AriyAI.ERP.Api.Controllers
             if (history != null && history.Count > 0)
             {
                 historyBuilder.AppendLine("CONVERSATION HISTORY (for context):");
-                // Include up to 40 messages to provide full history context
-                int start = Math.Max(0, history.Count - 40);
+                // Include up to 5 messages to provide compact history context (speeds up context pre-fill)
+                int start = Math.Max(0, history.Count - 5);
                 for (int i = start; i < history.Count; i++)
                 {
                     string speaker = history[i].Sender.Equals("user", StringComparison.OrdinalIgnoreCase) ? "User" : "AI";
                     string text = history[i].Text;
-                    // Do not truncate excessively so critical numbers and context are preserved
-                    if (text.Length > 2000) text = text.Substring(0, 1997) + "...";
+                    // Truncate to 1000 characters to keep context small and fast
+                    if (text.Length > 1000) text = text.Substring(0, 997) + "...";
                     historyBuilder.AppendLine($"- {speaker}: {text}");
                 }
                 historyBuilder.AppendLine();
@@ -434,7 +434,7 @@ SQL RULES & TIPS:
 - COMPARE THEM: If asked to compare two entities (e.g. ""compare them"" or ""compare Ayush and Vashishtha""), be consistent with the previous conversation's context. If they exist in both roles, compare them across both roles or match the previous conversation's intent. Do not randomly switch columns (e.g., do not switch from CustomerName to AgentName). Use GROUP BY appropriately.";
 
             var fullText = $"{systemPrompt}\n\n{historyBuilder}User Query: {message}\nAnswer/SQL:";
-            return await CallOllamaApiAsync(fullText);
+            return await CallOllamaApiAsync(fullText, temperature: 0.0, numPredict: 200);
         }
 
         private async Task<string> SynthesizeAnswerAsync(string message, string sql, string dataJson, List<ChatMessageDto> history)
@@ -443,12 +443,14 @@ SQL RULES & TIPS:
             if (history != null && history.Count > 0)
             {
                 historyBuilder.AppendLine("CONVERSATION HISTORY (for context):");
-                int start = Math.Max(0, history.Count - 40);
+                // Include up to 5 messages to provide compact history context (speeds up context pre-fill)
+                int start = Math.Max(0, history.Count - 5);
                 for (int i = start; i < history.Count; i++)
                 {
                     string speaker = history[i].Sender.Equals("user", StringComparison.OrdinalIgnoreCase) ? "User" : "AI";
                     string text = history[i].Text;
-                    if (text.Length > 2000) text = text.Substring(0, 1997) + "...";
+                    // Truncate to 1000 characters to keep context small and fast
+                    if (text.Length > 1000) text = text.Substring(0, 997) + "...";
                     historyBuilder.AppendLine($"- {speaker}: {text}");
                 }
                 historyBuilder.AppendLine();
@@ -475,10 +477,10 @@ CRITICAL INSTRUCTIONS:
 
 Direct Answer:";
 
-            return await CallOllamaApiAsync(prompt);
+            return await CallOllamaApiAsync(prompt, temperature: 0.2, numPredict: 150);
         }
 
-        private async Task<string> CallOllamaApiAsync(string prompt)
+        private async Task<string> CallOllamaApiAsync(string prompt, double temperature = 0.0, int numPredict = -1, int numCtx = 2048)
         {
             string baseUrl = _configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
             string model = Environment.GetEnvironmentVariable("OLLAMA_MODEL");
@@ -491,7 +493,13 @@ Direct Answer:";
             {
                 model = model,
                 prompt = prompt,
-                stream = false
+                stream = false,
+                options = new Dictionary<string, object>
+                {
+                    { "temperature", temperature },
+                    { "num_predict", numPredict },
+                    { "num_ctx", numCtx }
+                }
             };
 
             string url = $"{baseUrl.TrimEnd('/')}/api/generate";
@@ -583,6 +591,7 @@ Direct Answer:";
             public string model { get; set; } = string.Empty;
             public string prompt { get; set; } = string.Empty;
             public bool stream { get; set; } = false;
+            public Dictionary<string, object>? options { get; set; }
         }
 
         public class OllamaResponse
@@ -609,7 +618,26 @@ Direct Answer:";
             public List<ChartDatasetDto> Datasets { get; set; } = new();
         }
 
-        private ChartConfigDto? DetectAndBuildChart(string sqlQuery, List<Dictionary<string, object>> results)
+        private static bool ContainsWholeWord(string text, string word)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(word)) return false;
+            
+            int index = 0;
+            while ((index = text.IndexOf(word, index, StringComparison.OrdinalIgnoreCase)) != -1)
+            {
+                bool startBoundary = (index == 0 || !char.IsLetterOrDigit(text[index - 1]));
+                bool endBoundary = (index + word.Length == text.Length || !char.IsLetterOrDigit(text[index + word.Length]));
+                
+                if (startBoundary && endBoundary)
+                {
+                    return true;
+                }
+                index += word.Length;
+            }
+            return false;
+        }
+
+        private ChartConfigDto? DetectAndBuildChart(string sqlQuery, List<Dictionary<string, object>> results, string userMessage)
         {
             if (results == null || results.Count < 2)
             {
@@ -708,13 +736,57 @@ Direct Answer:";
             string chartType = "bar";
             string queryUpper = sqlQuery.ToUpperInvariant();
 
-            if (queryUpper.Contains("DATE") || queryUpper.Contains("MONTH") || queryUpper.Contains("TREND") || queryUpper.Contains("OVER TIME"))
+            // Explicit chart type selection based on user request keywords
+            if (ContainsWholeWord(userMessage, "pie") || 
+                userMessage.Contains("piechart", StringComparison.OrdinalIgnoreCase) || 
+                userMessage.Contains("piegraph", StringComparison.OrdinalIgnoreCase))
+            {
+                chartType = "pie";
+            }
+            else if (ContainsWholeWord(userMessage, "doughnut") || 
+                     ContainsWholeWord(userMessage, "donut") || 
+                     userMessage.Contains("doughnutchart", StringComparison.OrdinalIgnoreCase) || 
+                     userMessage.Contains("donutchart", StringComparison.OrdinalIgnoreCase))
+            {
+                chartType = "doughnut";
+            }
+            else if (ContainsWholeWord(userMessage, "line") || 
+                     userMessage.Contains("linechart", StringComparison.OrdinalIgnoreCase) || 
+                     userMessage.Contains("linegraph", StringComparison.OrdinalIgnoreCase))
             {
                 chartType = "line";
             }
-            else if (results.Count <= 5 && (queryUpper.Contains("SHARE") || queryUpper.Contains("PERCENT") || queryUpper.Contains("DISTRIBUTION") || queryUpper.Contains("BREAKDOWN")))
+            else if (ContainsWholeWord(userMessage, "bar") || 
+                     ContainsWholeWord(userMessage, "column") || 
+                     userMessage.Contains("barchart", StringComparison.OrdinalIgnoreCase) || 
+                     userMessage.Contains("bargraph", StringComparison.OrdinalIgnoreCase) || 
+                     userMessage.Contains("columnchart", StringComparison.OrdinalIgnoreCase) || 
+                     userMessage.Contains("columngraph", StringComparison.OrdinalIgnoreCase))
             {
-                chartType = "doughnut";
+                chartType = "bar";
+            }
+            else
+            {
+                // Fall back to heuristics if no explicit choice
+                bool isTimeTrend = false;
+                if (!string.IsNullOrEmpty(labelColumn))
+                {
+                    string labelColUpper = labelColumn.ToUpperInvariant();
+                    if (labelColUpper.Contains("DATE") || labelColUpper.Contains("MONTH") || labelColUpper.Contains("YEAR") || 
+                        labelColUpper.Contains("WEEK") || labelColUpper.Contains("DAY") || labelColUpper.Contains("TIME"))
+                    {
+                        isTimeTrend = true;
+                    }
+                }
+
+                if (queryUpper.Contains("TREND") || queryUpper.Contains("OVER TIME") || isTimeTrend)
+                {
+                    chartType = "line";
+                }
+                else if (results.Count <= 5 && (queryUpper.Contains("SHARE") || queryUpper.Contains("PERCENT") || queryUpper.Contains("DISTRIBUTION") || queryUpper.Contains("BREAKDOWN")))
+                {
+                    chartType = "doughnut";
+                }
             }
 
             var dataset = new ChartDatasetDto
@@ -739,7 +811,14 @@ Direct Answer:";
                     "#00bcd4",
                     "#26a69a",
                     "#ff9800",
-                    "#9c27b0"
+                    "#9c27b0",
+                    "#e91e63",
+                    "#4caf50",
+                    "#ffeb3b",
+                    "#ff5722",
+                    "#607d8b",
+                    "#9e9e9e",
+                    "#3f51b5"
                 };
                 dataset.BorderColor = new List<string> { "#ffffff" };
                 dataset.BorderWidth = 1.5;
