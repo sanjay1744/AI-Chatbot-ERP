@@ -66,3 +66,9 @@ build/
 out/
 *.tar.gz
 *.zip
+
+# SQLite temp files
++*.db
+*.db-shm
+*.db-wal
+*.db-journal

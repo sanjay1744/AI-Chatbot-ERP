@@ -5,11 +5,16 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using ExcelDataReader;
+using AriyAI.ERP.Api.Data;
+using AriyAI.ERP.Api.Models;
 
 namespace AriyAI.ERP.Api.Controllers
 {
@@ -18,6 +23,7 @@ namespace AriyAI.ERP.Api.Controllers
     public class ChatController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private readonly ErpDbContext _context;
         private static readonly HttpClient _httpClient = new HttpClient();
 
         // In-memory SQLite shared cache fields
@@ -26,9 +32,10 @@ namespace AriyAI.ERP.Api.Controllers
         private static bool _isExcelLoaded = false;
         private static DateTime _lastExcelWriteTime = DateTime.MinValue;
 
-        public ChatController(IConfiguration configuration)
+        public ChatController(IConfiguration configuration, ErpDbContext context)
         {
             _configuration = configuration;
+            _context = context;
         }
 
         public class ChatMessageDto
@@ -39,8 +46,141 @@ namespace AriyAI.ERP.Api.Controllers
 
         public class ChatRequest
         {
+            public int? SessionId { get; set; }
             public string Message { get; set; } = string.Empty;
-            public List<ChatMessageDto> History { get; set; } = new();
+        }
+
+        // GET api/chat/sessions
+        [HttpGet("sessions")]
+        public async Task<IActionResult> GetSessions()
+        {
+            var sessions = await _context.ChatSessions
+                .OrderByDescending(s => s.UpdatedAt)
+                .Select(s => new {
+                    s.Id,
+                    s.Title,
+                    s.CreatedAt,
+                    s.UpdatedAt
+                })
+                .ToListAsync();
+
+            return Ok(sessions);
+        }
+
+        // GET api/chat/sessions/{id}
+        [HttpGet("sessions/{id}")]
+        public async Task<IActionResult> GetSession(int id)
+        {
+            var session = await _context.ChatSessions
+                .Include(s => s.Messages)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (session == null)
+            {
+                return NotFound("Chat session not found.");
+            }
+
+            var messages = session.Messages
+                .OrderBy(m => m.Timestamp)
+                .Select(m => new {
+                    m.Id,
+                    m.Sender,
+                    m.Text,
+                    m.Sql,
+                    Data = string.IsNullOrEmpty(m.Data) ? null : JsonSerializer.Deserialize<List<Dictionary<string, object>>>(m.Data),
+                    Chart = string.IsNullOrEmpty(m.Chart) ? null : JsonSerializer.Deserialize<object>(m.Chart),
+                    m.Timestamp
+                })
+                .ToList();
+
+            return Ok(new {
+                session.Id,
+                session.Title,
+                session.CreatedAt,
+                session.UpdatedAt,
+                Messages = messages
+            });
+        }
+
+        // POST api/chat/sessions
+        [HttpPost("sessions")]
+        public async Task<IActionResult> CreateSession([FromBody] CreateSessionDto dto)
+        {
+            var session = new ChatSession
+            {
+                Title = string.IsNullOrWhiteSpace(dto?.Title) ? "New Chat" : dto.Title,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.ChatSessions.Add(session);
+            await _context.SaveChangesAsync();
+
+            return Ok(session);
+        }
+
+        public class CreateSessionDto
+        {
+            public string Title { get; set; } = string.Empty;
+        }
+
+        // PUT api/chat/sessions/{id}
+        [HttpPut("sessions/{id}")]
+        public async Task<IActionResult> RenameSession(int id, [FromBody] RenameSessionDto dto)
+        {
+            var session = await _context.ChatSessions.FindAsync(id);
+            if (session == null)
+            {
+                return NotFound("Chat session not found.");
+            }
+
+            session.Title = dto.Title;
+            session.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(session);
+        }
+
+        public class RenameSessionDto
+        {
+            public string Title { get; set; } = string.Empty;
+        }
+
+        // DELETE api/chat/sessions/{id}
+        [HttpDelete("sessions/{id}")]
+        public async Task<IActionResult> DeleteSession(int id)
+        {
+            var session = await _context.ChatSessions.FindAsync(id);
+            if (session == null)
+            {
+                return NotFound("Chat session not found.");
+            }
+
+            _context.ChatSessions.Remove(session);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Chat session deleted successfully." });
+        }
+
+        private async Task<string> GenerateSessionTitleAsync(string userMessage, CancellationToken cancellationToken)
+        {
+            try
+            {
+                string prompt = $"Create a short 3-6 word title for a conversation that begins with the following user prompt. Respond ONLY with the title. Do not add quotes, explanation, or punctuation.\n\nUser Prompt: {userMessage}\n\nTitle:";
+                string title = await CallOllamaApiAsync(prompt, temperature: 0.5, numPredict: 15, cancellationToken: cancellationToken);
+                title = title.Trim().Trim('"', '\'');
+                if (!string.IsNullOrWhiteSpace(title) && title.Length <= 50)
+                {
+                    return title;
+                }
+            }
+            catch
+            {
+                // Fallback
+            }
+
+            if (userMessage.Length <= 30) return userMessage;
+            return userMessage.Substring(0, 27) + "...";
         }
 
         [HttpPost]
@@ -51,18 +191,66 @@ namespace AriyAI.ERP.Api.Controllers
                 return BadRequest("Message cannot be empty.");
             }
 
+            ChatSession? session = null;
+            bool isNewSession = false;
+
             try
             {
+                // Find or create the session
+                if (request.SessionId == null || request.SessionId == 0)
+                {
+                    session = new ChatSession
+                    {
+                        Title = "New Chat",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.ChatSessions.Add(session);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    isNewSession = true;
+                }
+                else
+                {
+                    session = await _context.ChatSessions
+                        .Include(s => s.Messages)
+                        .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
+
+                    if (session == null)
+                    {
+                        return NotFound("Chat session not found.");
+                    }
+                }
+
+                if (isNewSession)
+                {
+                    session.Title = await GenerateSessionTitleAsync(request.Message, cancellationToken);
+                }
+
+                var history = session.Messages
+                    .OrderBy(m => m.Timestamp)
+                    .Select(m => new ChatMessageDto { Sender = m.Sender, Text = m.Text })
+                    .ToList();
+
                 // Step 1: Text-to-SQL or Direct Conversation via LLM
-                string modelOutput = await GenerateSqlFromMessageAsync(request.Message, request.History, cancellationToken);
+                string modelOutput = await GenerateSqlFromMessageAsync(request.Message, history, cancellationToken);
 
                 if (string.IsNullOrWhiteSpace(modelOutput))
                 {
+                    string fallbackReply = "I'm sorry, I couldn't process that. Could you please try again?";
+                    
+                    session.Messages.Add(new ChatMessage { Sender = "user", Text = request.Message, Timestamp = DateTime.UtcNow });
+                    session.Messages.Add(new ChatMessage { Sender = "ai", Text = fallbackReply, Timestamp = DateTime.UtcNow });
+                    session.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+
                     return Ok(new
                     {
-                        reply = "I'm sorry, I couldn't process that. Could you please try again?",
+                        sessionId = session.Id,
+                        sessionTitle = session.Title,
+                        reply = fallbackReply,
                         sql = "",
-                        data = new List<object>()
+                        data = new List<object>(),
+                        chart = (object?)null
                     });
                 }
 
@@ -73,11 +261,20 @@ namespace AriyAI.ERP.Api.Controllers
                 {
                     // It is a direct conversational reply from the AI!
                     string cleanedOutput = CleanSqlQuery(modelOutput);
+
+                    session.Messages.Add(new ChatMessage { Sender = "user", Text = request.Message, Timestamp = DateTime.UtcNow });
+                    session.Messages.Add(new ChatMessage { Sender = "ai", Text = cleanedOutput, Timestamp = DateTime.UtcNow });
+                    session.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+
                     return Ok(new
                     {
+                        sessionId = session.Id,
+                        sessionTitle = session.Title,
                         reply = cleanedOutput,
                         sql = "",
-                        data = new List<object>()
+                        data = new List<object>(),
+                        chart = (object?)null
                     });
                 }
 
@@ -89,11 +286,21 @@ namespace AriyAI.ERP.Api.Controllers
                     upperQuery.Contains("DROP") || upperQuery.Contains("ALTER") || upperQuery.Contains("CREATE") || 
                     upperQuery.Contains("TRUNCATE"))
                 {
+                    string safetyReply = "Safety block: Only read-only queries (SELECT) are permitted.";
+
+                    session.Messages.Add(new ChatMessage { Sender = "user", Text = request.Message, Timestamp = DateTime.UtcNow });
+                    session.Messages.Add(new ChatMessage { Sender = "ai", Text = safetyReply, Sql = sqlQuery, Timestamp = DateTime.UtcNow });
+                    session.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+
                     return BadRequest(new
                     {
-                        reply = "Safety block: Only read-only queries (SELECT) are permitted.",
+                        sessionId = session.Id,
+                        sessionTitle = session.Title,
+                        reply = safetyReply,
                         sql = sqlQuery,
-                        data = new List<object>()
+                        data = new List<object>(),
+                        chart = (object?)null
                     });
                 }
 
@@ -125,12 +332,27 @@ namespace AriyAI.ERP.Api.Controllers
 
                 // Step 3: Synthesis of final natural response
                 string resultsJson = JsonSerializer.Serialize(queryResults);
-                string reply = await SynthesizeAnswerAsync(request.Message, sqlQuery, resultsJson, request.History, cancellationToken);
+                string reply = await SynthesizeAnswerAsync(request.Message, sqlQuery, resultsJson, history, cancellationToken);
 
                 var chartConfig = DetectAndBuildChart(sqlQuery, queryResults, request.Message);
 
+                session.Messages.Add(new ChatMessage { Sender = "user", Text = request.Message, Timestamp = DateTime.UtcNow });
+                session.Messages.Add(new ChatMessage 
+                { 
+                    Sender = "ai", 
+                    Text = reply, 
+                    Sql = sqlQuery, 
+                    Data = resultsJson, 
+                    Chart = chartConfig == null ? null : JsonSerializer.Serialize(chartConfig),
+                    Timestamp = DateTime.UtcNow 
+                });
+                session.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync(cancellationToken);
+
                 return Ok(new
                 {
+                    sessionId = session.Id,
+                    sessionTitle = session.Title,
                     reply = reply,
                     sql = sqlQuery,
                     data = queryResults,
@@ -140,20 +362,45 @@ namespace AriyAI.ERP.Api.Controllers
             catch (HttpRequestException httpEx)
             {
                 string friendlyMessage = $"I couldn't connect to your local Ollama instance ({httpEx.Message}). \n\nPlease ensure that:\n1. **Ollama** is running on your machine.\n2. You have pulled the model using: `ollama pull qwen2.5-coder:1.5b`";
+                
+                if (session != null)
+                {
+                    session.Messages.Add(new ChatMessage { Sender = "user", Text = request.Message, Timestamp = DateTime.UtcNow });
+                    session.Messages.Add(new ChatMessage { Sender = "ai", Text = friendlyMessage, Timestamp = DateTime.UtcNow });
+                    session.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
                 return Ok(new
                 {
+                    sessionId = session?.Id ?? 0,
+                    sessionTitle = session?.Title ?? "",
                     reply = friendlyMessage,
                     sql = "",
-                    data = new List<object>()
+                    data = new List<object>(),
+                    chart = (object?)null
                 });
             }
             catch (Exception ex)
             {
+                string errorMessage = $"An error occurred while executing the query. Error details: {ex.Message}";
+
+                if (session != null)
+                {
+                    session.Messages.Add(new ChatMessage { Sender = "user", Text = request.Message, Timestamp = DateTime.UtcNow });
+                    session.Messages.Add(new ChatMessage { Sender = "ai", Text = errorMessage, Timestamp = DateTime.UtcNow });
+                    session.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
                 return Ok(new
                 {
-                    reply = $"An error occurred while executing the query. Error details: {ex.Message}",
+                    sessionId = session?.Id ?? 0,
+                    sessionTitle = session?.Title ?? "",
+                    reply = errorMessage,
                     sql = "",
-                    data = new List<object>()
+                    data = new List<object>(),
+                    chart = (object?)null
                 });
             }
         }
@@ -422,6 +669,7 @@ SQL RULES & TIPS:
 - To list all product/item names, query: SELECT DISTINCT ItemName FROM SalesRecords;
 - When comparing multiple agents, customers, or products, select their name column and use GROUP BY (e.g., SELECT AgentName, SUM(Qty * Rate) FROM SalesRecords WHERE AgentName IN ('AARU TECH', 'NBM') GROUP BY AgentName;). Do NOT calculate a single aggregated sum without GROUP BY.
 - CRITICAL: Never write SELECT SUM(...) WHERE AgentName = 'A' OR AgentName = 'B' without GROUP BY, because that combines their sales together instead of comparing them. You must always SELECT the AgentName column and use GROUP BY AgentName.
+- CRITICAL: Never use aggregate functions like SUM(), AVG(), COUNT(), etc. in the WHERE clause (e.g., WHERE SUM(...) > 100000 is invalid). To filter on aggregated values, you MUST use the HAVING clause after GROUP BY (e.g., GROUP BY CustomerName HAVING SUM(Qty * Rate) > 100000).
 - Calculate Sales revenue as: Qty * Rate
 - Use LIKE with wildcards for text comparison to avoid spelling or casing mismatch (e.g. AgentName LIKE '%Thalaimalai%' or CustomerName LIKE '%Premier%').
 - For date ranges, compare InvoiceDate string like: InvoiceDate >= '2025-01-01'

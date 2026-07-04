@@ -72,7 +72,27 @@ export class ApiService {
   }
 
   // AI Chatbot
-  postChatMessage(message: string, history: { sender: string; text: string }[] = []): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/chat`, { message, history });
+  getChatSessions(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/chat/sessions`);
+  }
+
+  getChatSession(id: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/chat/sessions/${id}`);
+  }
+
+  createChatSession(title: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/chat/sessions`, { title });
+  }
+
+  renameChatSession(id: number, title: string): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/chat/sessions/${id}`, { title });
+  }
+
+  deleteChatSession(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/chat/sessions/${id}`);
+  }
+
+  postChatMessage(message: string, sessionId: number | null): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/chat`, { message, sessionId });
   }
 }

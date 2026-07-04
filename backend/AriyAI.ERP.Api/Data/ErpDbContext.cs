@@ -17,6 +17,8 @@ namespace AriyAI.ERP.Api.Data
         public DbSet<Quotation> Quotations => Set<Quotation>();
         public DbSet<QuotationProduct> QuotationProducts => Set<QuotationProduct>();
         public DbSet<SalesRecord> SalesRecords => Set<SalesRecord>();
+        public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+        public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,6 +43,13 @@ namespace AriyAI.ERP.Api.Data
                 .WithMany()
                 .HasForeignKey(e => e.AssignToId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure ChatSession messages relation
+            modelBuilder.Entity<ChatSession>()
+                .HasMany(s => s.Messages)
+                .WithOne()
+                .HasForeignKey(m => m.ChatSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

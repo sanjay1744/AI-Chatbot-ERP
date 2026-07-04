@@ -69,6 +69,11 @@
   animation: copilotSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  &.expanded {
+    width: 720px;
+  }
 
   app-ai-assistant {
     display: block;

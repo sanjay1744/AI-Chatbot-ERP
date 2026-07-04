@@ -1,12 +1,78 @@
-<div class="ai-chat-container">
-  <!-- Chat Header -->
-  <div class="chat-header">
-    <div class="header-title-block">
-      <img src="copilot-logo.svg" class="bot-icon-img" alt="AriyAI Copilot" />
-      <div>
-        <h2 class="title">AriyAI Copilot</h2>
-      </div>
+<div class="ai-chat-layout" [class.sidebar-open]="isHistoryOpen">
+  <!-- Chat History Sidebar -->
+  <div class="chat-history-sidebar" [class.open]="isHistoryOpen">
+    <div class="sidebar-header">
+      <h3>Chat History</h3>
+      <button class="close-sidebar-btn" (click)="toggleHistory(false)" title="Close History">
+        <span class="material-icons-outlined">chevron_left</span>
+      </button>
     </div>
+
+    <!-- Search Box inside history -->
+    <div class="history-search">
+      <span class="material-icons-outlined search-icon">search</span>
+      <input 
+        type="text" 
+        [(ngModel)]="historySearchQuery" 
+        (ngModelChange)="filterSessions()"
+        placeholder="Search chats..."
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="history-list">
+      @for (session of filteredSessions; track session.id) {
+        <div class="history-item" [class.active]="session.id === currentSessionId" (click)="selectSession(session.id)">
+          <span class="material-icons-outlined chat-icon">chat_bubble_outline</span>
+          <div class="item-title-block">
+            @if (editingSessionId === session.id) {
+              <input 
+                type="text" 
+                [(ngModel)]="editingTitle" 
+                (keydown.enter)="saveRename(session.id)" 
+                (blur)="saveRename(session.id)"
+                (click)="$event.stopPropagation()"
+              />
+            } @else {
+              <span class="item-title">{{ session.title }}</span>
+            }
+          </div>
+          
+          <div class="item-actions" (click)="$event.stopPropagation()">
+            @if (editingSessionId !== session.id) {
+              <button class="action-btn" (click)="startRename(session)" title="Rename">
+                <span class="material-icons-outlined">edit</span>
+              </button>
+              <button class="action-btn delete-btn" (click)="deleteSession(session.id)" title="Delete">
+                <span class="material-icons-outlined">delete</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+      @if (filteredSessions.length === 0) {
+        <div class="no-history">No conversations found</div>
+      }
+    </div>
+  </div>
+
+  <!-- Sidebar Backdrop Overlay -->
+  @if (isHistoryOpen) {
+    <div class="sidebar-backdrop" (click)="toggleHistory(false)"></div>
+  }
+
+  <div class="ai-chat-container">
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="header-title-block">
+        <button class="toggle-history-btn" (click)="toggleHistory()" title="Chat History">
+          <span class="material-icons-outlined">menu</span>
+        </button>
+        <img src="copilot-logo.svg" class="bot-icon-img" alt="AriyAI Copilot" />
+        <div>
+          <h2 class="title">AriyAI Copilot</h2>
+        </div>
+      </div>
     <div class="header-actions">
       <button class="new-chat-btn" (click)="clearChat()" title="New Chat">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
@@ -94,6 +160,7 @@
                     <table class="dynamic-results-table">
                       <thead>
                         <tr>
+                          <th>S.No</th>
                           @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
                             <th (click)="openTableModal(msg, header)" class="sortable-header" title="Click to view full table properly">
                               <div class="header-cell-content">
@@ -109,8 +176,9 @@
                         </tr>
                       </thead>
                       <tbody>
-                        @for (row of getFilteredData(msg); track row) {
+                        @for (row of getFilteredData(msg); track row; let i = $index) {
                           <tr>
+                            <td>{{ i + 1 }}</td>
                             @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
                               <td>{{ row[header] }}</td>
                             }
@@ -118,7 +186,7 @@
                         }
                         @if (getFilteredData(msg).length === 0) {
                           <tr>
-                            <td [attr.colspan]="getTableHeaders(msg.data || msg.parsedData || []).length" class="no-results-td">
+                            <td [attr.colspan]="getTableHeaders(msg.data || msg.parsedData || []).length + 1" class="no-results-td">
                               No matching records found.
                             </td>
                           </tr>
@@ -209,6 +277,7 @@
     </form>
   </div>
 </div>
+</div>
 
 <!-- Dynamic Full-Screen Table Popup Modal -->
 @if (activeModalMessage) {
@@ -259,6 +328,7 @@
         <table class="modal-results-table">
           <thead>
             <tr>
+              <th>S.No</th>
               @for (header of getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []); track header) {
                 <th (click)="toggleSort(activeModalMessage, header)" class="sortable-header">
                   <div class="header-cell-content">
@@ -274,8 +344,9 @@
             </tr>
           </thead>
           <tbody>
-            @for (row of getFilteredData(activeModalMessage); track row) {
+            @for (row of getFilteredData(activeModalMessage); track row; let i = $index) {
               <tr>
+                <td>{{ i + 1 }}</td>
                 @for (header of getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []); track header) {
                   <td>{{ row[header] }}</td>
                 }
@@ -283,7 +354,7 @@
             }
             @if (getFilteredData(activeModalMessage).length === 0) {
               <tr>
-                <td [attr.colspan]="getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []).length" class="no-results-td">
+                <td [attr.colspan]="getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []).length + 1" class="no-results-td">
                   No matching records found.
                 </td>
               </tr>
