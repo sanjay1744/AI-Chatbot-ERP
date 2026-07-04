@@ -754,7 +754,14 @@ Direct Answer:";
             var json = JsonSerializer.Serialize(requestBody);
             var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(url, httpContent, cancellationToken);
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = httpContent
+            };
+            requestMessage.Headers.Add("ngrok-skip-browser-warning", "true");
+            requestMessage.Headers.Add("User-Agent", "dotnet-http-client");
+
+            var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync();
