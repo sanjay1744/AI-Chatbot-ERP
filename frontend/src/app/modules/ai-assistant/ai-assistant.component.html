@@ -160,6 +160,7 @@
                     <table class="dynamic-results-table">
                       <thead>
                         <tr>
+                          <th>S.No</th>
                           @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
                             <th (click)="openTableModal(msg, header)" class="sortable-header" title="Click to view full table properly">
                               <div class="header-cell-content">
@@ -175,8 +176,9 @@
                         </tr>
                       </thead>
                       <tbody>
-                        @for (row of getFilteredData(msg); track row) {
+                        @for (row of getFilteredData(msg); track row; let i = $index) {
                           <tr>
+                            <td>{{ i + 1 }}</td>
                             @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
                               <td>{{ row[header] }}</td>
                             }
@@ -184,7 +186,7 @@
                         }
                         @if (getFilteredData(msg).length === 0) {
                           <tr>
-                            <td [attr.colspan]="getTableHeaders(msg.data || msg.parsedData || []).length" class="no-results-td">
+                            <td [attr.colspan]="getTableHeaders(msg.data || msg.parsedData || []).length + 1" class="no-results-td">
                               No matching records found.
                             </td>
                           </tr>
@@ -326,6 +328,7 @@
         <table class="modal-results-table">
           <thead>
             <tr>
+              <th>S.No</th>
               @for (header of getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []); track header) {
                 <th (click)="toggleSort(activeModalMessage, header)" class="sortable-header">
                   <div class="header-cell-content">
@@ -341,8 +344,9 @@
             </tr>
           </thead>
           <tbody>
-            @for (row of getFilteredData(activeModalMessage); track row) {
+            @for (row of getFilteredData(activeModalMessage); track row; let i = $index) {
               <tr>
+                <td>{{ i + 1 }}</td>
                 @for (header of getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []); track header) {
                   <td>{{ row[header] }}</td>
                 }
@@ -350,7 +354,7 @@
             }
             @if (getFilteredData(activeModalMessage).length === 0) {
               <tr>
-                <td [attr.colspan]="getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []).length" class="no-results-td">
+                <td [attr.colspan]="getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []).length + 1" class="no-results-td">
                   No matching records found.
                 </td>
               </tr>

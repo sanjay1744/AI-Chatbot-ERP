@@ -669,6 +669,7 @@ SQL RULES & TIPS:
 - To list all product/item names, query: SELECT DISTINCT ItemName FROM SalesRecords;
 - When comparing multiple agents, customers, or products, select their name column and use GROUP BY (e.g., SELECT AgentName, SUM(Qty * Rate) FROM SalesRecords WHERE AgentName IN ('AARU TECH', 'NBM') GROUP BY AgentName;). Do NOT calculate a single aggregated sum without GROUP BY.
 - CRITICAL: Never write SELECT SUM(...) WHERE AgentName = 'A' OR AgentName = 'B' without GROUP BY, because that combines their sales together instead of comparing them. You must always SELECT the AgentName column and use GROUP BY AgentName.
+- CRITICAL: Never use aggregate functions like SUM(), AVG(), COUNT(), etc. in the WHERE clause (e.g., WHERE SUM(...) > 100000 is invalid). To filter on aggregated values, you MUST use the HAVING clause after GROUP BY (e.g., GROUP BY CustomerName HAVING SUM(Qty * Rate) > 100000).
 - Calculate Sales revenue as: Qty * Rate
 - Use LIKE with wildcards for text comparison to avoid spelling or casing mismatch (e.g. AgentName LIKE '%Thalaimalai%' or CustomerName LIKE '%Premier%').
 - For date ranges, compare InvoiceDate string like: InvoiceDate >= '2025-01-01'

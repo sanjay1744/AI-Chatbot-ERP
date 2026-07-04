@@ -481,18 +481,21 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
 
   exportToCsv(data: any[], filename: string) {
     if (!data || data.length === 0) return;
-    const headers = Object.keys(data[0]);
+    const headers = ['S.No', ...Object.keys(data[0])];
     const csvRows = [];
     
     csvRows.push(headers.map(header => `"${header.replace(/"/g, '""')}"`).join(','));
     
+    let index = 1;
     for (const row of data) {
       const values = headers.map(header => {
+        if (header === 'S.No') return `"${index}"`;
         const val = row[header];
         const escaped = ('' + (val ?? '')).replace(/"/g, '""');
         return `"${escaped}"`;
       });
       csvRows.push(values.join(','));
+      index++;
     }
     
     const csvContent = '\uFEFF' + csvRows.join('\r\n');
@@ -513,17 +516,20 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
 
   copyTableToClipboard(data: any[]) {
     if (!data || data.length === 0) return;
-    const headers = Object.keys(data[0]);
+    const headers = ['S.No', ...Object.keys(data[0])];
     const rows = [];
     
     rows.push(headers.join('\t'));
     
+    let index = 1;
     for (const row of data) {
       const values = headers.map(header => {
+        if (header === 'S.No') return index.toString();
         const val = row[header];
         return ('' + (val ?? '')).replace(/\r?\n/g, ' ');
       });
       rows.push(values.join('\t'));
+      index++;
     }
     
     const tsvContent = rows.join('\n');
