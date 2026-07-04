@@ -39,9 +39,20 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-// Configure EF Core with SQLite
-builder.Services.AddDbContext<ErpDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=erp.db"));
+// Configure EF Core with SQLite or PostgreSQL based on connection string
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+                      ?? Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING");
+
+if (!string.IsNullOrEmpty(connectionString) && (connectionString.Contains("Host=") || connectionString.Contains("Server=") || connectionString.Contains("sslmode=")))
+{
+    builder.Services.AddDbContext<ErpDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
+else
+{
+    builder.Services.AddDbContext<ErpDbContext>(options =>
+        options.UseSqlite(connectionString ?? "Data Source=erp.db"));
+}
 
 // Configure CORS for Angular Frontend
 builder.Services.AddCors(options =>
