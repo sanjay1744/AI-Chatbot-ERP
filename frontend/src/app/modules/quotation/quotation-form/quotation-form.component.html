@@ -1,0 +1,260 @@
+<div class="page">
+  <!-- Back + Title -->
+  <div class="page-title-row" style="margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button class="back-link" (click)="cancel()">
+        <span class="material-icons-outlined">arrow_back</span>
+      </button>
+      <h1 class="page-title">{{ isEditMode ? 'EDIT QUOTATION' : 'NEW QUOTATION' }}</h1>
+    </div>
+  </div>
+
+  <!-- Accent Divider -->
+  <div class="accent-divider"></div>
+
+  <!-- Tabs (7 Tabs) -->
+  <div class="form-tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'general'" (click)="selectTab('general')">General Info</button>
+    <button class="tab-btn" [class.active]="activeTab === 'products'" (click)="selectTab('products')">Quotation Product</button>
+    <button class="tab-btn" [class.active]="activeTab === 'terms'" (click)="selectTab('terms')">Terms & Condition</button>
+    <button class="tab-btn" [class.active]="activeTab === 'emails'" (click)="selectTab('emails')">Email(s) to Send Quotation</button>
+    <button class="tab-btn" [class.active]="activeTab === 'charges'" (click)="selectTab('charges')">Charges</button>
+    <button class="tab-btn" [class.active]="activeTab === 'delivery'" (click)="selectTab('delivery')">Delivery Address</button>
+    <button class="tab-btn" [class.active]="activeTab === 'export'" (click)="selectTab('export')">Export Info</button>
+  </div>
+
+  <!-- TAB: General Info -->
+  <div class="tab-body" *ngIf="activeTab === 'general'">
+    <div class="form-row cols-5">
+      <div class="field-outlined">
+        <label>Quotation Number</label>
+        <input type="text" [value]="quotation.quotationNumber" disabled />
+      </div>
+      <div class="field-outlined">
+        <label>Quotation Date*</label>
+        <input type="date" [(ngModel)]="quotation.quotationDate" />
+      </div>
+      <div class="field-outlined">
+        <label>Customer Reference</label>
+        <input type="text" [(ngModel)]="quotation.customerReference" />
+      </div>
+      <div class="field-outlined">
+        <label>Currency</label>
+        <select [(ngModel)]="quotation.currency">
+          <option value="INR">INR (₹)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
+        </select>
+      </div>
+      <div class="field-outlined">
+        <label>Due Date*</label>
+        <input type="date" [(ngModel)]="quotation.dueDate" />
+      </div>
+    </div>
+
+    <div class="form-row cols-2">
+      <div class="field-outlined">
+        <label>Customer*</label>
+        <select [(ngModel)]="quotation.customerId" (change)="onCustomerChange()">
+          <option [value]="0"></option>
+          <option *ngFor="let cust of customers" [value]="cust.id">{{ cust.name }}</option>
+        </select>
+      </div>
+      <div class="field-outlined">
+        <label>Address</label>
+        <input type="text" [(ngModel)]="quotation.address" />
+      </div>
+    </div>
+
+    <div class="form-row cols-3">
+      <div class="field-outlined">
+        <label>Agent Name*</label>
+        <select [(ngModel)]="quotation.agentId">
+          <option [value]="undefined"></option>
+          <option *ngFor="let ag of agents" [value]="ag.id">{{ ag.name }}</option>
+        </select>
+      </div>
+      <div class="field-outlined">
+        <label>Quot. Subject 1</label>
+        <input type="text" [(ngModel)]="quotation.subject1" />
+      </div>
+      <div class="field-outlined">
+        <label>Quot. Subject 2</label>
+        <input type="text" [(ngModel)]="quotation.subject2" />
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Quotation Product -->
+  <div class="tab-body" *ngIf="activeTab === 'products'">
+    <div class="section-header">
+      <h3 class="section-title">PRODUCT DETAILS</h3>
+      <div class="section-actions">
+        <div class="inline-search">
+          <span class="material-icons-outlined icon-sm">search</span>
+          <input type="text" placeholder="Search" />
+        </div>
+        <button class="btn btn-outline btn-sm">
+          <span class="material-icons-outlined icon-sm">file_download</span> Template
+        </button>
+        <button class="btn btn-outline btn-sm">
+          <span class="material-icons-outlined icon-sm">upload</span> Import
+        </button>
+        <button class="btn btn-primary btn-sm" (click)="openAddProductModal()">
+          <span class="material-icons-outlined icon-sm">add</span> New Item
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th style="width: 40px">#</th>
+            <th>Group</th>
+            <th>Product Description</th>
+            <th>Part Number</th>
+            <th>Make</th>
+            <th>Model</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Amount</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of quotation.quotationProducts; let idx = index">
+            <td>{{ idx + 1 }}</td>
+            <td>{{ item.group }}</td>
+            <td>{{ item.productDescription }}</td>
+            <td>{{ item.partNumber || '—' }}</td>
+            <td>{{ item.make || '—' }}</td>
+            <td>{{ item.model || '—' }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.rate | number:'1.2-2' }}</td>
+            <td>{{ (item.quantity * item.rate) | number:'1.2-2' }}</td>
+            <td style="text-align: center;">
+              <button class="icon-action-btn delete" (click)="removeProductItem(idx)">
+                <span class="material-icons-outlined icon-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="quotation.quotationProducts.length === 0">
+            <td colspan="10" class="empty-state">No products added. Click "New Item" to add.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Product Pagination -->
+    <div class="pagination">
+      <div class="page-size">
+        <span>Items per page:</span>
+        <select class="form-control page-size-select"><option>10</option></select>
+      </div>
+      <span class="page-info">0 of 0</span>
+      <div class="page-buttons">
+        <button class="pg-btn" disabled>|&lt;</button>
+        <button class="pg-btn" disabled>&lt;</button>
+        <button class="pg-btn" disabled>&gt;</button>
+        <button class="pg-btn" disabled>&gt;|</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Terms & Conditions -->
+  <div class="tab-body" *ngIf="activeTab === 'terms'">
+    <div class="field-outlined">
+      <label>Payment Terms & Validity Conditions</label>
+      <textarea rows="6" placeholder="E.g. 50% advance along with P.O. and remaining 50% against delivery. Validity of quote is 30 days."></textarea>
+    </div>
+  </div>
+
+  <!-- TAB: Emails to send -->
+  <div class="tab-body" *ngIf="activeTab === 'emails'">
+    <div class="field-outlined" style="max-width: 480px;">
+      <label>Emails to CC Quotation (comma-separated)</label>
+      <input type="text" placeholder="sales-team@ariyaitech.com, finance@ariyaitech.com" />
+    </div>
+  </div>
+
+  <!-- TAB: Charges -->
+  <div class="tab-body" *ngIf="activeTab === 'charges'">
+    <div class="form-row cols-2" style="max-width: 480px;">
+      <div class="field-outlined">
+        <label>Freight Charges (INR)</label>
+        <input type="number" [value]="0" />
+      </div>
+      <div class="field-outlined">
+        <label>Packaging & Forwarding (INR)</label>
+        <input type="number" [value]="0" />
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Delivery Address -->
+  <div class="tab-body" *ngIf="activeTab === 'delivery'">
+    <div class="field-outlined">
+      <label>Factory/Warehouse Dispatch Destination Address</label>
+      <textarea rows="4" placeholder="Enter delivery destination details..."></textarea>
+    </div>
+  </div>
+
+  <!-- TAB: Export Info -->
+  <div class="tab-body" *ngIf="activeTab === 'export'">
+    <div class="form-row cols-2">
+      <div class="field-outlined">
+        <label>Port of Loading</label>
+        <input type="text" placeholder="Chennai Port" />
+      </div>
+      <div class="field-outlined">
+        <label>Country of Origin</label>
+        <input type="text" value="India" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Actions -->
+  <div class="form-actions-bar">
+    <button class="btn btn-outline" (click)="cancel()">Cancel</button>
+    <button class="btn btn-primary" (click)="saveQuotation()">
+      <span class="material-icons-outlined icon-sm">save</span> Save
+    </button>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal-overlay" *ngIf="showProductModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Add Quotation Item</h3>
+      <button class="modal-close" (click)="showProductModal = false">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-outlined" style="margin-bottom: 16px;">
+        <label>Select Product*</label>
+        <select [(ngModel)]="selectedProductId" (change)="onProductSelect()">
+          <option [value]="null">Select product...</option>
+          <option *ngFor="let prod of products" [value]="prod.id">
+            [{{ prod.group }}] {{ prod.description }} — Rate: {{ prod.rate }}
+          </option>
+        </select>
+      </div>
+      <div class="form-row cols-2">
+        <div class="field-outlined">
+          <label>Quantity*</label>
+          <input type="number" [(ngModel)]="newProductQty" min="1" />
+        </div>
+        <div class="field-outlined">
+          <label>Rate*</label>
+          <input type="number" [(ngModel)]="newProductRate" min="0" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="showProductModal = false">Cancel</button>
+      <button class="btn btn-primary" [disabled]="!selectedProductId" (click)="addProductItem()">Add Item</button>
+    </div>
+  </div>
+</div>

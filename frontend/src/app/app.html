@@ -1,0 +1,21 @@
+<div class="app-container">
+  <app-sidebar></app-sidebar>
+  <div class="main-content">
+    <app-header></app-header>
+    <div class="content-body">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Action Button (FAB) -->
+<button class="copilot-fab" [class.active]="copilotState.isOpen()" (click)="toggleCopilot()" title="AriyAI Copilot">
+  <img src="copilot-logo.svg" class="fab-logo-img" alt="Copilot" />
+</button>
+
+<!-- Global Floating Copilot Popup -->
+@if (copilotState.isOpen()) {
+  <div class="copilot-popup-container">
+    <app-ai-assistant></app-ai-assistant>
+  </div>
+}
