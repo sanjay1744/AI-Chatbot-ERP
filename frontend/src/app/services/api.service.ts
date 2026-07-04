@@ -8,7 +8,7 @@ import { Customer, Agent, Product, SalesEnquiry, Quotation } from '../models/erp
 })
 export class ApiService {
   private http = inject(HttpClient);
-  private baseUrl = 'http://localhost:5022/api';
+  private baseUrl = 'https://ai-chatbot-erp.onrender.com/api';
 
   // Master Lists
   getCustomers(): Observable<Customer[]> {
