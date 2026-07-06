@@ -72,3 +72,6 @@ out/
 *.db-shm
 *.db-wal
 *.db-journal
+
+# Office temporary files
+~$*

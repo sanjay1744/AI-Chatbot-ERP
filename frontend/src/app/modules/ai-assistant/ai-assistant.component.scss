@@ -1457,3 +1457,27 @@
     opacity: 1;
   }
 }
+
+/* ===== Forecast & Anomaly Row Highlighting ===== */
+tr.row-forecast, tr.row-forecast:nth-child(even) {
+  background-color: rgba(255, 152, 0, 0.08) !important;
+  td {
+    color: #e65100;
+    font-style: italic;
+    font-weight: 500;
+  }
+  &:hover {
+    background-color: rgba(255, 152, 0, 0.12) !important;
+  }
+}
+
+tr.row-anomaly, tr.row-anomaly:nth-child(even) {
+  background-color: rgba(244, 67, 54, 0.08) !important;
+  td {
+    color: #c62828;
+    font-weight: 600;
+  }
+  &:hover {
+    background-color: rgba(244, 67, 54, 0.12) !important;
+  }
+}
