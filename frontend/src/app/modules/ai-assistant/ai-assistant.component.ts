@@ -50,6 +50,11 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
   editingSessionId: number | null = null;
   editingTitle: string = '';
 
+  // Voice Input (Speech-to-Text) states
+  isSpeechSupported: boolean = false;
+  isListening: boolean = false;
+  private recognition: any;
+
   suggestionChips = [
     'What are the total sales across all records?',
     'Who is the top-performing sales agent?',
@@ -67,6 +72,7 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
       timestamp: new Date()
     });
     this.loadSessions();
+    this.initSpeechRecognition();
   }
 
   ngAfterViewChecked() {
@@ -310,6 +316,60 @@ export class AiAssistantComponent implements OnInit, AfterViewChecked, AfterView
     if (this.chatSubscription) {
       this.chatSubscription.unsubscribe();
       this.chatSubscription = undefined;
+    }
+    if (this.recognition && this.isListening) {
+      this.recognition.stop();
+    }
+  }
+
+  initSpeechRecognition() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    this.isSpeechSupported = !!SpeechRecognition;
+    
+    if (this.isSpeechSupported) {
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = false;
+      this.recognition.interimResults = false;
+      this.recognition.lang = 'en-IN';
+
+      this.recognition.onstart = () => {
+        this.isListening = true;
+        this.cdr.detectChanges();
+      };
+
+      this.recognition.onend = () => {
+        this.isListening = false;
+        this.cdr.detectChanges();
+      };
+
+      this.recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          this.userInput = transcript;
+          this.cdr.detectChanges();
+        }
+      };
+
+      this.recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        this.isListening = false;
+        this.cdr.detectChanges();
+      };
+    }
+  }
+
+  toggleVoiceInput() {
+    if (!this.isSpeechSupported || this.isLoading) return;
+
+    if (this.isListening) {
+      this.recognition.stop();
+    } else {
+      try {
+        this.userInput = '';
+        this.recognition.start();
+      } catch (err) {
+        console.error('Failed to start speech recognition:', err);
+      }
     }
   }
 

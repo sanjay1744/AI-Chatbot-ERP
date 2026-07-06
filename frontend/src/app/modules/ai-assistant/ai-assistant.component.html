@@ -265,6 +265,18 @@
         [disabled]="isLoading"
         autocomplete="off"
       />
+      <button 
+        type="button" 
+        class="mic-btn" 
+        [class.listening]="isListening" 
+        (click)="toggleVoiceInput()" 
+        [disabled]="!isSpeechSupported || isLoading"
+        [title]="!isSpeechSupported ? 'Speech input not supported on this browser' : (isListening ? 'Stop Listening' : 'Voice Input (Speak)')"
+      >
+        <span class="material-icons-outlined">
+          {{ isListening ? 'mic' : 'mic_none' }}
+        </span>
+      </button>
       @if (isLoading) {
         <button type="button" class="stop-btn" (click)="stopChat()" title="Stop Generation">
           <span class="material-icons">stop</span>
