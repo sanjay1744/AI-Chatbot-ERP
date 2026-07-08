@@ -177,7 +177,7 @@
                       </thead>
                       <tbody>
                         @for (row of getFilteredData(msg); track row; let i = $index) {
-                          <tr>
+                          <tr [class.row-forecast]="row['IsForecast']" [class.row-anomaly]="row['IsAnomaly']">
                             <td>{{ i + 1 }}</td>
                             @for (header of getTableHeaders(msg.data || msg.parsedData || []); track header) {
                               <td>{{ row[header] }}</td>
@@ -357,7 +357,7 @@
           </thead>
           <tbody>
             @for (row of getFilteredData(activeModalMessage); track row; let i = $index) {
-              <tr>
+              <tr [class.row-forecast]="row['IsForecast']" [class.row-anomaly]="row['IsAnomaly']">
                 <td>{{ i + 1 }}</td>
                 @for (header of getTableHeaders(activeModalMessage.data || activeModalMessage.parsedData || []); track header) {
                   <td>{{ row[header] }}</td>

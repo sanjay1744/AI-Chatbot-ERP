@@ -231,6 +231,149 @@ namespace AriyAI.ERP.Api.Controllers
                     .Select(m => new ChatMessageDto { Sender = m.Sender, Text = m.Text })
                     .ToList();
 
+                string msgLower = request.Message.ToLowerInvariant();
+                bool isAnomalyRequest = msgLower.Contains("anomaly") || msgLower.Contains("anomalies") || 
+                                         msgLower.Contains("unusual drop") || msgLower.Contains("sudden drop") || 
+                                         msgLower.Contains("suspicious") || (msgLower.Contains("drop") && msgLower.Contains("customer"));
+
+                bool isForecastRequest = msgLower.Contains("forecast") || msgLower.Contains("predict") || 
+                                         msgLower.Contains("project") || msgLower.Contains("projections");
+
+                if (isAnomalyRequest)
+                {
+                    // Ensure the Excel spreadsheet is loaded into our isolated in-memory DB
+                    await EnsureExcelLoadedAsync();
+
+                    // Step A: Get Top 10 Customers by total sales revenue
+                    var topCustomers = new List<string>();
+                    using (var connection = new SqliteConnection("Data Source=ExcelInMemory;Mode=Memory;Cache=Shared"))
+                    {
+                        await connection.OpenAsync(cancellationToken);
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText = @"
+                                SELECT CustomerName, SUM(Qty * Rate) AS TotalRevenue 
+                                FROM SalesRecords 
+                                GROUP BY CustomerName 
+                                ORDER BY TotalRevenue DESC 
+                                LIMIT 10;";
+                            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                            {
+                                while (await reader.ReadAsync(cancellationToken))
+                                {
+                                    topCustomers.Add(reader.GetString(0));
+                                }
+                            }
+                        }
+                    }
+
+                    // Step B: Get Monthly sales for each top customer
+                    var customerMonthlySales = new Dictionary<string, List<(string Month, double Sales)>>();
+                    using (var connection = new SqliteConnection("Data Source=ExcelInMemory;Mode=Memory;Cache=Shared"))
+                    {
+                        await connection.OpenAsync(cancellationToken);
+                        foreach (var customer in topCustomers)
+                        {
+                            var monthlyList = new List<(string Month, double Sales)>();
+                            using (var command = connection.CreateCommand())
+                            {
+                                command.CommandText = @"
+                                    SELECT substr(InvoiceDate, 1, 7) AS Month, SUM(Qty * Rate) AS MonthlySales 
+                                    FROM SalesRecords 
+                                    WHERE CustomerName = $customerName 
+                                    GROUP BY Month 
+                                    ORDER BY Month;";
+                                command.Parameters.AddWithValue("$customerName", customer);
+                                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                                {
+                                    while (await reader.ReadAsync(cancellationToken))
+                                    {
+                                        string month = reader.GetString(0);
+                                        double sales = reader.GetDouble(1);
+                                        monthlyList.Add((month, sales));
+                                    }
+                                }
+                            }
+                            customerMonthlySales[customer] = monthlyList;
+                        }
+                    }
+
+                    // Step C: Run anomaly Z-score calculation
+                    var anomalies = DetectAnomalies(customerMonthlySales);
+
+                    // Step D: Format anomalies as a result list
+                    var anomalyResults = new List<Dictionary<string, object>>();
+                    foreach (var an in anomalies)
+                    {
+                        var row = new Dictionary<string, object>
+                        {
+                            { "CustomerName", an.CustomerName },
+                            { "Month", an.Month },
+                            { "AverageMonthlySales", Math.Round(an.AverageSales, 2) },
+                            { "LatestSales", Math.Round(an.LatestSales, 2) },
+                            { "DropPercentage", Math.Round(an.DropPercentage, 1) },
+                            { "ZScore", Math.Round(an.ZScore, 2) },
+                            { "IsAnomaly", true }
+                        };
+                        anomalyResults.Add(row);
+                    }
+
+                    // Step E: Synthesize final answer via LLM
+                    string anomalyResultsJson = JsonSerializer.Serialize(anomalyResults);
+                    
+                    string synthesisPrompt = $@"You are AriyAI, an intelligent Manufacturing Assistant.
+The user asked to check for unusual drops in purchase volume (Anomaly Detection).
+Here is the Z-score anomaly report computed for our top 10 customers:
+{anomalyResultsJson}
+
+Please write a natural, direct, and friendly alert message in English:
+- If anomalies are found, clearly list the customers who have sudden drops in sales, stating their average sales, recent sales, and percentage drop. Format currency strictly in INR (e.g. INR 15,43,200).
+- If no anomalies are found, state that all top 10 customers are maintaining stable purchase volumes.
+- Keep the response extremely concise (1 or 2 sentences max). Do not mention Z-score or standard deviation unless helpful.
+
+Direct Answer:";
+
+                    string anomalyReply = await CallOllamaApiAsync(synthesisPrompt, temperature: 0.2, numPredict: 150, cancellationToken: cancellationToken);
+
+                    object? anomalyChartConfig = null;
+                    if (anomalyResults.Any())
+                    {
+                        anomalyChartConfig = new
+                        {
+                            Type = "bar",
+                            Labels = anomalyResults.Select(r => r["CustomerName"].ToString()).ToList(),
+                            Datasets = new List<object>
+                            {
+                                new { Label = "Average Monthly Sales", Data = anomalyResults.Select(r => (double)r["AverageMonthlySales"]).ToList(), BackgroundColor = "rgba(21, 101, 192, 0.4)", BorderColor = "#1565c0", BorderWidth = 1 },
+                                new { Label = "Latest Sales (Anomaly Drop)", Data = anomalyResults.Select(r => (double)r["LatestSales"]).ToList(), BackgroundColor = "rgba(239, 83, 80, 0.8)", BorderColor = "#ef5350", BorderWidth = 1 }
+                            }
+                        };
+                    }
+
+                    session.Messages.Add(new ChatMessage { Sender = "user", Text = request.Message, Timestamp = DateTime.UtcNow });
+                    session.Messages.Add(new ChatMessage 
+                    { 
+                        Sender = "ai", 
+                        Text = anomalyReply, 
+                        Sql = "-- Custom Backend Z-score Anomaly Detection Pipeline", 
+                        Data = anomalyResultsJson, 
+                        Chart = anomalyChartConfig == null ? null : JsonSerializer.Serialize(anomalyChartConfig),
+                        Timestamp = DateTime.UtcNow 
+                    });
+                    session.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+
+                    return Ok(new
+                    {
+                        sessionId = session.Id,
+                        sessionTitle = session.Title,
+                        reply = anomalyReply,
+                        sql = "-- Custom Backend Z-score Anomaly Detection Pipeline",
+                        data = anomalyResults,
+                        chart = anomalyChartConfig
+                    });
+                }
+
                 // Step 1: Text-to-SQL or Direct Conversation via LLM
                 string modelOutput = await GenerateSqlFromMessageAsync(request.Message, history, cancellationToken);
 
@@ -326,6 +469,117 @@ namespace AriyAI.ERP.Api.Controllers
                                 }
                                 queryResults.Add(row);
                             }
+                        }
+                    }
+                }
+
+                // Run Forecasting calculations if requested
+                if (isForecastRequest && queryResults.Count > 0)
+                {
+                    string? dateColumn = null;
+                    string? valueColumn = null;
+
+                    var firstRow = queryResults[0];
+                    foreach (var kvp in firstRow)
+                    {
+                        var colNameUpper = kvp.Key.ToUpperInvariant();
+                        bool isNumeric = kvp.Value is short || kvp.Value is int || kvp.Value is long || 
+                                         kvp.Value is float || kvp.Value is double || kvp.Value is decimal;
+                        
+                        if (!isNumeric && double.TryParse(kvp.Value?.ToString(), out _))
+                        {
+                            isNumeric = true;
+                        }
+
+                        if (isNumeric && colNameUpper != "ID" && !colNameUpper.EndsWith("ID"))
+                        {
+                            valueColumn = kvp.Key;
+                        }
+                        else if (!isNumeric && (colNameUpper.Contains("DATE") || colNameUpper.Contains("MONTH") || colNameUpper.Contains("YEAR") || colNameUpper.Contains("TIME") || colNameUpper.Contains("PERIOD")))
+                        {
+                            dateColumn = kvp.Key;
+                        }
+                    }
+
+                    // Fallbacks if columns are not clearly named
+                    if (string.IsNullOrEmpty(dateColumn))
+                    {
+                        foreach (var kvp in firstRow)
+                        {
+                            if (!double.TryParse(kvp.Value?.ToString() ?? "", out _))
+                            {
+                                dateColumn = kvp.Key;
+                                break;
+                            }
+                        }
+                    }
+                    if (string.IsNullOrEmpty(valueColumn))
+                    {
+                        foreach (var kvp in firstRow)
+                        {
+                            if (double.TryParse(kvp.Value?.ToString() ?? "", out _))
+                            {
+                                valueColumn = kvp.Key;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(dateColumn) && !string.IsNullOrEmpty(valueColumn))
+                    {
+                        var historicalValues = new List<double>();
+                        foreach (var row in queryResults)
+                        {
+                            if (row.TryGetValue(valueColumn, out var val) && val != null)
+                            {
+                                double.TryParse(val.ToString(), out double num);
+                                historicalValues.Add(num);
+                            }
+                        }
+
+                        if (historicalValues.Count > 0)
+                        {
+                            var forecast = RunLinearRegression(historicalValues);
+
+                            string nextMonthStr = "Next Period (Forecast)";
+                            var lastRow = queryResults.Last();
+                            if (lastRow.TryGetValue(dateColumn, out var lastDate) && lastDate != null)
+                            {
+                                string lastDateStr = lastDate.ToString() ?? "";
+                                if (System.Text.RegularExpressions.Regex.IsMatch(lastDateStr, @"^\d{4}-\d{2}$"))
+                                {
+                                    if (DateTime.TryParse(lastDateStr + "-01", out DateTime parsedDate))
+                                    {
+                                        nextMonthStr = parsedDate.AddMonths(1).ToString("yyyy-MM") + " (Forecast)";
+                                    }
+                                }
+                                else if (System.Text.RegularExpressions.Regex.IsMatch(lastDateStr, @"^\d{4}-\d{2}-\d{2}$"))
+                                {
+                                    if (DateTime.TryParse(lastDateStr, out DateTime parsedDate))
+                                    {
+                                        nextMonthStr = parsedDate.AddMonths(1).ToString("yyyy-MM-dd") + " (Forecast)";
+                                    }
+                                }
+                            }
+
+                            var forecastRow = new Dictionary<string, object>();
+                            foreach (var key in firstRow.Keys)
+                            {
+                                if (key == dateColumn)
+                                {
+                                    forecastRow[key] = nextMonthStr;
+                                }
+                                else if (key == valueColumn)
+                                {
+                                    forecastRow[key] = Math.Round(forecast.NextValue, 2);
+                                }
+                                else
+                                {
+                                    forecastRow[key] = lastRow.TryGetValue(key, out var lastVal) ? lastVal : "";
+                                }
+                            }
+                            forecastRow["IsForecast"] = true;
+                            queryResults.Add(forecastRow);
                         }
                     }
                 }
@@ -635,7 +889,7 @@ Analyze the user's input and the CONVERSATION HISTORY together.
 
 CRITICAL DEFAULT RULE: If there is any conversation history about data/sales/agents/customers/products, then assume ANY short or ambiguous user input is a FOLLOW-UP to that previous conversation — NOT a casual greeting. Only treat a message as casual if the conversation has NO prior data context at all.
 
-1. If the user's input is a question asking for data, statistics, calculations, summaries, names, or lists from the database/spreadsheet records (e.g. total sales, top customers, agent performance, quantities, or specific names of associated agents/customers/products), you MUST generate a read-only SQLite SELECT query.
+1. If the user's input is a question asking for quantitative data, statistics, calculations, summaries, names, or lists from the database/spreadsheet records (e.g. total sales, top customers, agent performance, quantities, or specific names of associated agents/customers/products), you MUST generate a read-only SQLite SELECT query.
    - Return ONLY the raw SQL query. Do not wrap in markdown code blocks. Do not explain.
    - Example: SELECT SUM(Qty * Rate) FROM SalesRecords;
 
@@ -645,7 +899,9 @@ CRITICAL DEFAULT RULE: If there is any conversation history about data/sales/age
    - Example: If the AI previously said ""GM MARKETING is the best agent"" and the user asks ""and y"" or ""y"", interpret it as ""why is GM MARKETING the best agent?"" and generate a SQL query to show GM MARKETING's total revenue: SELECT AgentName, SUM(Qty * Rate) AS TotalRevenue FROM SalesRecords WHERE AgentName LIKE '%GM MARKETING%' GROUP BY AgentName;
    - Example: If the user previously asked ""how many agents are associated with priyadharshini"" and now asks ""who is it"", you must generate: SELECT DISTINCT AgentName FROM SalesRecords WHERE CustomerName LIKE '%Priyadharshini%';
 
-3. ONLY if the user's input is a completely generic/casual greeting with NO prior data conversation (e.g. ""hi"", ""how are you"", ""who are you"", ""tell me a joke"", ""thank you""), respond directly in a warm, helpful, and friendly conversational manner.
+3. STRATEGIC, ADVISORY, OR CONCEPTUAL QUESTIONS: If the user is asking for qualitative advice, business recommendations, suggestions, explanations, or improvement strategies (e.g. ""how can he improve his performance?"", ""how can the management help him?"", ""suggest sales strategies"", ""why is he performing low?"" in a qualitative sense), do NOT write a SQL query. Instead, respond directly in a helpful, analytical, and professional conversational manner as an expert manufacturing/business consultant.
+
+4. GREETINGS & CASUAL INPUT: Only if the user's input is a completely generic/casual greeting with NO prior data conversation (e.g. ""hi"", ""how are you"", ""who are you"", ""tell me a joke"", ""thank you""), respond directly in a warm, helpful, and friendly conversational manner.
 
 DATABASE SCHEMA (only query this table):
 1. `SalesRecords` (loaded from the spreadsheet)
@@ -1097,6 +1353,128 @@ Direct Answer:";
                 Labels = labels,
                 Datasets = new List<ChartDatasetDto> { dataset }
             };
+        }
+
+        public class RegressionResult
+        {
+            public double Slope { get; set; }
+            public double Intercept { get; set; }
+            public double NextValue { get; set; }
+        }
+
+        public class AnomalyRecord
+        {
+            public string CustomerName { get; set; } = string.Empty;
+            public string Month { get; set; } = string.Empty;
+            public double AverageSales { get; set; }
+            public double LatestSales { get; set; }
+            public double DropPercentage { get; set; }
+            public double ZScore { get; set; }
+        }
+
+        private static RegressionResult RunLinearRegression(List<double> values)
+        {
+            var result = new RegressionResult();
+            if (values == null || values.Count == 0)
+            {
+                return result;
+            }
+
+            int n = values.Count;
+            if (n == 1)
+            {
+                result.Slope = 0;
+                result.Intercept = values[0];
+                result.NextValue = values[0];
+                return result;
+            }
+
+            double sumX = 0;
+            double sumY = 0;
+            double sumXY = 0;
+            double sumX2 = 0;
+
+            for (int i = 0; i < n; i++)
+            {
+                double x = i + 1;
+                double y = values[i];
+                sumX += x;
+                sumY += y;
+                sumXY += x * y;
+                sumX2 += x * x;
+            }
+
+            double denominator = n * sumX2 - sumX * sumX;
+            if (Math.Abs(denominator) < 1e-9)
+            {
+                result.Slope = 0;
+                result.Intercept = sumY / n;
+                result.NextValue = result.Intercept;
+            }
+            else
+            {
+                result.Slope = (n * sumXY - sumX * sumY) / denominator;
+                result.Intercept = (sumY - result.Slope * sumX) / n;
+                result.NextValue = result.Slope * (n + 1) + result.Intercept;
+            }
+
+            return result;
+        }
+
+        private static List<AnomalyRecord> DetectAnomalies(Dictionary<string, List<(string Month, double Sales)>> customerSales)
+        {
+            var anomalies = new List<AnomalyRecord>();
+
+            foreach (var kvp in customerSales)
+            {
+                var customerName = kvp.Key;
+                var salesList = kvp.Value.OrderBy(x => x.Month).ToList();
+                
+                int count = salesList.Count;
+                if (count < 3) continue;
+
+                var latest = salesList[count - 1];
+                var historical = salesList.Take(count - 1).ToList();
+
+                double sum = historical.Sum(x => x.Sales);
+                double mean = sum / historical.Count;
+
+                if (mean <= 0) continue;
+
+                double sumOfSquares = historical.Sum(x => Math.Pow(x.Sales - mean, 2));
+                double stdDev = Math.Sqrt(sumOfSquares / historical.Count);
+
+                double latestSales = latest.Sales;
+                double dropPercentage = ((mean - latestSales) / mean) * 100;
+                
+                if (latestSales < mean)
+                {
+                    double zscore = 0;
+                    if (stdDev > 0.01)
+                    {
+                        zscore = (latestSales - mean) / stdDev;
+                    }
+                    else
+                    {
+                        zscore = -3.0;
+                    }
+
+                    if (zscore <= -1.5 && dropPercentage >= 40)
+                    {
+                        anomalies.Add(new AnomalyRecord
+                        {
+                            CustomerName = customerName,
+                            Month = latest.Month,
+                            AverageSales = mean,
+                            LatestSales = latestSales,
+                            DropPercentage = dropPercentage,
+                            ZScore = zscore
+                        });
+                    }
+                }
+            }
+
+            return anomalies;
         }
     }
 }
