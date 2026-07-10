@@ -13,9 +13,67 @@
   </div>
 
   <div class="header-right">
-    <button class="icon-btn notification-btn">
-      <span class="material-icons-outlined">notifications_none</span>
-    </button>
+    <div class="notifications-wrapper">
+      <button class="icon-btn notification-btn" (click)="toggleNotifications($event)">
+        <span class="material-icons-outlined">notifications_none</span>
+        <span class="red-badge">2</span>
+      </button>
+
+      @if (isNotificationsOpen) {
+        <div class="notifications-dropdown-menu" (click)="$event.stopPropagation()">
+          <!-- Tab Headers -->
+          <div class="notif-tab-headers">
+            <button class="notif-tab-btn" [class.active]="activeNotifTab === 'notifications'" (click)="selectNotifTab('notifications')">
+              NOTIFICATIONS
+            </button>
+            <button class="notif-tab-btn" [class.active]="activeNotifTab === 'mails'" (click)="selectNotifTab('mails')">
+              MAILS
+            </button>
+          </div>
+          
+          <!-- Tab Body -->
+          <div class="notif-tab-body">
+            @if (activeNotifTab === 'mails') {
+              <!-- Header of mails tab -->
+              <div class="notif-body-header">
+                <span class="recent-title">Recent Messages</span>
+                <button class="btn-sync-gmail" (click)="syncGmail()">
+                  <span class="material-icons-outlined sync-icon">sync</span>
+                  Sync Gmail
+                </button>
+              </div>
+              
+              <!-- Mails list -->
+              <div class="mails-list-container">
+                @for (mail of mockMails; track mail.id) {
+                  <div class="mail-row-item">
+                    <div class="mail-icon-circle">
+                      <span class="material-icons-outlined">mail</span>
+                    </div>
+                    <div class="mail-details-block">
+                      <div class="mail-sender-row">
+                        <span class="mail-sender-name">{{ mail.sender }}</span>
+                        <span class="mail-time">{{ mail.time }}</span>
+                      </div>
+                      <div class="mail-subject">{{ mail.subject }}</div>
+                      <div class="mail-snippet">{{ mail.snippet }}</div>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <!-- Notifications Tab -->
+              <div class="notifications-list-container">
+                <div class="no-notifications-state">
+                  <span class="material-icons-outlined">notifications_paused</span>
+                  <p>No new system alerts.</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
 
     <div class="user-block" (click)="toggleUserMenu($event)">
       <div class="user-info">
