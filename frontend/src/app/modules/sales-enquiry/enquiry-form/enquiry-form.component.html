@@ -170,12 +170,87 @@
 
   <!-- TAB: Contacts -->
   <div class="tab-body" *ngIf="activeTab === 'contacts'">
-    <div class="info-card">
-      <h4>Primary Contact Info</h4>
-      <p><strong>Contact Person:</strong> Thalaimalai Naren</p>
-      <p><strong>Department:</strong> Marketing & Procurement</p>
-      <p><strong>Phone:</strong> +91 9443210987</p>
-      <p><strong>Email:</strong> naren.procure&#64;manjunatha.com</p>
+    <!-- Table Header Toolbar -->
+    <div class="section-header" style="margin-bottom: 16px;">
+      <div class="section-title-wrapper">
+        <span class="section-title-text">CONTACT PERSONS</span>
+        <span class="badge-loaded">{{ contacts.length }} loaded</span>
+      </div>
+      
+      <div class="section-actions">
+        <div class="inline-search">
+          <span class="material-icons-outlined icon-sm">search</span>
+          <input 
+            type="text" 
+            [(ngModel)]="searchContactQuery" 
+            (ngModelChange)="filterContacts()" 
+            placeholder="Search Contacts" 
+          />
+        </div>
+        <button class="btn btn-primary btn-sm" (click)="openAddContactModal()">
+          <span class="material-icons-outlined icon-sm">add</span> Add Contact
+        </button>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">
+              <input type="checkbox" />
+            </th>
+            <th>Is Primary</th>
+            <th>Name</th>
+            <th>Designation</th>
+            <th>Mobile</th>
+            <th>Email</th>
+            <th style="width: 100px; text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredContacts; let idx = index">
+            <td style="text-align: center;">
+              <input type="checkbox" />
+            </td>
+            <td>
+              <span *ngIf="item.isPrimary" class="badge badge-approved">Primary</span>
+              <span *ngIf="!item.isPrimary">—</span>
+            </td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.designation }}</td>
+            <td>{{ item.mobile || '—' }}</td>
+            <td>{{ item.email }}</td>
+            <td style="text-align: center;">
+              <button class="icon-action-btn edit" (click)="openEditContactModal(idx)" title="Edit Contact" style="margin-right: 6px;">
+                <span class="material-icons-outlined icon-sm">edit</span>
+              </button>
+              <button class="icon-action-btn delete" (click)="deleteContact(idx)" title="Delete Contact">
+                <span class="material-icons-outlined icon-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredContacts.length === 0">
+            <td colspan="7" class="empty-state">No contacts found. Click "Add Contact" to add.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Contacts Pagination -->
+    <div class="pagination">
+      <div class="page-size">
+        <span>Items per page:</span>
+        <select class="form-control page-size-select"><option>10</option></select>
+      </div>
+      <span class="page-info">1 - {{ filteredContacts.length }} of {{ filteredContacts.length }}</span>
+      <div class="page-buttons">
+        <button class="pg-btn" disabled>|&lt;</button>
+        <button class="pg-btn" disabled>&lt;</button>
+        <button class="pg-btn" disabled>&gt;</button>
+        <button class="pg-btn" disabled>&gt;|</button>
+      </div>
     </div>
   </div>
 
@@ -228,24 +303,26 @@
         <span class="search-label">
           SEARCH ITEM <span class="char-hint">(type 3+ characters)</span>
         </span>
-        <button class="btn-new" (click)="addCustomProduct()">+ New</button>
       </div>
 
-      <!-- Search Input -->
-      <div class="search-input-wrapper">
-        <span class="material-icons-outlined search-icon">search</span>
-        <input 
-          type="text" 
-          [(ngModel)]="searchQuery" 
-          (ngModelChange)="onSearchQueryChange()" 
-          placeholder="e.g. roller, bearing, seal kit..." 
-          class="search-field" 
-        />
-        <span 
-          class="material-icons-outlined clear-icon" 
-          *ngIf="searchQuery" 
-          (click)="clearSearch()"
-        >close</span>
+      <!-- Search Input Row -->
+      <div class="search-row-layout">
+        <div class="search-input-wrapper">
+          <span class="material-icons-outlined search-icon">search</span>
+          <input 
+            type="text" 
+            [(ngModel)]="searchQuery" 
+            (ngModelChange)="onSearchQueryChange()" 
+            placeholder="e.g. roller, bearing, seal kit..." 
+            class="search-field" 
+          />
+          <span 
+            class="material-icons-outlined clear-icon" 
+            *ngIf="searchQuery" 
+            (click)="clearSearch()"
+          >close</span>
+        </div>
+        <button class="btn-new" (click)="addCustomProduct()">+ New</button>
       </div>
 
       <!-- Condition 1: Less than 3 characters and no items selected -->
@@ -348,6 +425,63 @@
       >
         <span class="material-icons-outlined icon-sm">shopping_cart</span>
         Add {{ selectedProductsForForm.length > 0 ? selectedProductsForForm.length : '' }} Product{{ selectedProductsForForm.length > 1 ? 's' : '' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Contact Modal -->
+<div class="modal-overlay" *ngIf="showContactModal">
+  <div class="modal-box contact-modal-box">
+    <div class="modal-header contact-modal-header">
+      <h3>NEW CONTACT</h3>
+      <button class="modal-close contact-modal-close" (click)="showContactModal = false">
+        <span class="material-icons-outlined" style="color: #ffffff; font-size: 20px;">close</span>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- 2 Column Inputs -->
+      <div class="contact-form-grid">
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.name" placeholder="Contact Name*" class="form-control contact-input" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.designation" placeholder="Designation*" class="form-control contact-input" />
+        </div>
+        
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.phoneHome" placeholder="Phone (Home)" class="form-control contact-input" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.phoneOffice" placeholder="Phone (Office)" class="form-control contact-input" />
+        </div>
+        
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.mobile" placeholder="Mobile Number*" class="form-control contact-input" />
+        </div>
+        <div class="form-field">
+          <input type="email" [(ngModel)]="contactForm.email" placeholder="Email ID*" class="form-control contact-input" />
+        </div>
+      </div>
+      
+      <!-- Checkboxes -->
+      <div class="checkbox-row">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="contactForm.active" />
+          Active
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="contactForm.isPrimary" />
+          Is Primary Contact
+        </label>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-exit" (click)="showContactModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="saveContact()">
+        {{ isContactEditMode ? 'Save' : 'Add' }}
       </button>
     </div>
   </div>

@@ -51,6 +51,27 @@ export class EnquiryFormComponent implements OnInit {
   searchResults: Product[] = [];
   selectedProductsForForm: any[] = [];
 
+  // Contact Persons Tab State
+  contacts: any[] = [
+    { name: '1111', designation: '1111', phoneHome: '', phoneOffice: '', mobile: '1111111111', email: 'asa@13.com', active: true, isPrimary: false },
+    { name: 'Uma Maheshwari', designation: 'ceo', phoneHome: '', phoneOffice: '', mobile: '', email: 'uma.m@ariyaitech.com', active: true, isPrimary: false }
+  ];
+  filteredContacts: any[] = [];
+  searchContactQuery = '';
+  showContactModal = false;
+  isContactEditMode = false;
+  editingContactIndex: number | null = null;
+  contactForm: any = {
+    name: '',
+    designation: '',
+    phoneHome: '',
+    phoneOffice: '',
+    mobile: '',
+    email: '',
+    active: true,
+    isPrimary: false
+  };
+
   // OCR state
   ocrFile: File | null = null;
   isOcrProcessing = false;
@@ -59,6 +80,7 @@ export class EnquiryFormComponent implements OnInit {
   ngOnInit() {
     this.loadMasters();
     this.checkRoute();
+    this.filterContacts();
   }
 
   loadMasters() {
@@ -254,6 +276,74 @@ export class EnquiryFormComponent implements OnInit {
         });
       }
     }, 2000);
+  }
+
+  // Contacts Management Methods
+  filterContacts() {
+    const q = this.searchContactQuery.toLowerCase().trim();
+    if (!q) {
+      this.filteredContacts = [...this.contacts];
+      return;
+    }
+    this.filteredContacts = this.contacts.filter(c => 
+      (c.name && c.name.toLowerCase().includes(q)) ||
+      (c.designation && c.designation.toLowerCase().includes(q)) ||
+      (c.email && c.email.toLowerCase().includes(q)) ||
+      (c.mobile && c.mobile.toLowerCase().includes(q))
+    );
+  }
+
+  openAddContactModal() {
+    this.isContactEditMode = false;
+    this.editingContactIndex = null;
+    this.contactForm = {
+      name: '',
+      designation: '',
+      phoneHome: '',
+      phoneOffice: '',
+      mobile: '',
+      email: '',
+      active: true,
+      isPrimary: false
+    };
+    this.showContactModal = true;
+  }
+
+  openEditContactModal(idx: number) {
+    this.isContactEditMode = true;
+    const contact = this.filteredContacts[idx];
+    this.editingContactIndex = this.contacts.indexOf(contact);
+    this.contactForm = { ...contact };
+    this.showContactModal = true;
+  }
+
+  saveContact() {
+    if (!this.contactForm.name || !this.contactForm.designation || !this.contactForm.mobile || !this.contactForm.email) {
+      alert('Please fill out all required fields marked with *');
+      return;
+    }
+
+    if (this.contactForm.isPrimary) {
+      this.contacts.forEach(c => c.isPrimary = false);
+    }
+
+    if (this.isContactEditMode && this.editingContactIndex !== null) {
+      this.contacts[this.editingContactIndex] = { ...this.contactForm };
+    } else {
+      this.contacts.push({ ...this.contactForm });
+    }
+
+    this.showContactModal = false;
+    this.filterContacts();
+  }
+
+  deleteContact(idx: number) {
+    const contact = this.filteredContacts[idx];
+    const mainIdx = this.contacts.indexOf(contact);
+    if (mainIdx > -1) {
+      this.contacts.splice(mainIdx, 1);
+      this.filterContacts();
+    }
   }
 
   // Form submission
