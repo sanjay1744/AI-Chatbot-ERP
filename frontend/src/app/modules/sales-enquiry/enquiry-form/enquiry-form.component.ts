@@ -47,9 +47,9 @@ export class EnquiryFormComponent implements OnInit {
 
   // New Item State (for product modal)
   showProductModal = false;
-  selectedProductId: number | null = null;
-  newProductQty = 1;
-  newProductRate = 0;
+  searchQuery = '';
+  searchResults: Product[] = [];
+  selectedProductsForForm: any[] = [];
 
   // OCR state
   ocrFile: File | null = null;
@@ -103,38 +103,110 @@ export class EnquiryFormComponent implements OnInit {
   // Product Management
   openAddProductModal() {
     this.showProductModal = true;
-    this.selectedProductId = null;
-    this.newProductQty = 1;
-    this.newProductRate = 0;
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.selectedProductsForForm = [];
   }
 
-  onProductSelect() {
-    const prod = this.products.find(p => p.id === Number(this.selectedProductId));
-    if (prod) {
-      this.newProductRate = prod.rate;
+  onSearchQueryChange() {
+    const q = this.searchQuery.toLowerCase().trim();
+    if (q.length < 3) {
+      this.searchResults = [];
+      return;
     }
+    
+    this.searchResults = this.products.filter(p => 
+      (p.description && p.description.toLowerCase().includes(q)) ||
+      (p.partNumber && p.partNumber.toLowerCase().includes(q)) ||
+      (p.group && p.group.toLowerCase().includes(q)) ||
+      (p.make && p.make.toLowerCase().includes(q))
+    );
   }
 
-  addProductItem() {
-    const prod = this.products.find(p => p.id === Number(this.selectedProductId));
-    if (prod) {
-      const item: EnquiryProduct = {
-        productId: prod.id,
-        group: prod.group,
-        productDescription: prod.description,
-        partNumber: prod.partNumber,
-        make: prod.make,
-        model: prod.model,
-        quantity: this.newProductQty,
-        rate: this.newProductRate
-      };
-      this.enquiry.enquiryProducts.push(item);
-      this.showProductModal = false;
+  clearSearch() {
+    this.searchQuery = '';
+    this.searchResults = [];
+  }
+
+  selectProduct(product: Product) {
+    if (this.selectedProductsForForm.some(p => p.id === product.id)) {
+      this.clearSearch();
+      return;
     }
+    
+    const formItem = {
+      id: product.id,
+      group: product.group || '',
+      productDescription: product.description || '',
+      partNumber: product.partNumber || '',
+      make: product.make || '',
+      model: product.model || '',
+      quantity: 1,
+      rate: product.rate || 0,
+      uom: 'NOS',
+      makes: this.getDistinctMakes(product.group),
+      models: this.getDistinctModels(product.group)
+    };
+    
+    this.selectedProductsForForm.push(formItem);
+    this.clearSearch();
+  }
+
+  addCustomProduct() {
+    const customItem = {
+      id: 0,
+      group: '',
+      productDescription: '',
+      partNumber: '',
+      make: '',
+      model: '',
+      quantity: 1,
+      rate: 0,
+      uom: 'NOS',
+      makes: this.getDistinctMakes(),
+      models: this.getDistinctModels()
+    };
+    this.selectedProductsForForm.push(customItem);
+  }
+
+  removeSelectedFormItem(index: number) {
+    this.selectedProductsForForm.splice(index, 1);
+  }
+
+  addSelectedProducts() {
+    for (const item of this.selectedProductsForForm) {
+      this.enquiry.enquiryProducts.push({
+        productId: item.id > 0 ? item.id : undefined,
+        group: item.group,
+        productDescription: item.productDescription,
+        partNumber: item.partNumber,
+        make: item.make,
+        model: item.model,
+        quantity: item.quantity,
+        rate: item.rate
+      });
+    }
+    this.showProductModal = false;
   }
 
   removeProductItem(index: number) {
     this.enquiry.enquiryProducts.splice(index, 1);
+  }
+
+  getDistinctMakes(group?: string): string[] {
+    const list = group 
+      ? this.products.filter(p => p.group === group) 
+      : this.products;
+    const makes = list.map(p => p.make).filter(m => m && m.trim() !== '');
+    return Array.from(new Set(makes));
+  }
+
+  getDistinctModels(group?: string): string[] {
+    const list = group 
+      ? this.products.filter(p => p.group === group) 
+      : this.products;
+    const models = list.map(p => p.model).filter(m => m && m.trim() !== '');
+    return Array.from(new Set(models));
   }
 
   // OCR Upload simulation

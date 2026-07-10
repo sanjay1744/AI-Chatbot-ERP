@@ -133,7 +133,7 @@
           <tr *ngFor="let item of enquiry.enquiryProducts; let idx = index">
             <td>{{ idx + 1 }}</td>
             <td>{{ item.group }}</td>
-            <td>{{ item.productDescription }}</td>
+            <td><div class="text-truncate" [title]="item.productDescription">{{ item.productDescription }}</div></td>
             <td>{{ item.partNumber || '—' }}</td>
             <td>{{ item.make || '—' }}</td>
             <td>{{ item.model || '—' }}</td>
@@ -216,33 +216,139 @@
 <div class="modal-overlay" *ngIf="showProductModal">
   <div class="modal-box">
     <div class="modal-header">
-      <h3>Add New Item</h3>
-      <button class="modal-close" (click)="showProductModal = false">&times;</button>
+      <h3>Add New Product Item</h3>
+      <button class="modal-close" (click)="showProductModal = false">
+        <span class="material-icons-outlined">close</span>
+      </button>
     </div>
+    
     <div class="modal-body">
-      <div class="field-outlined" style="margin-bottom: 16px;">
-        <label>Select Product*</label>
-        <select [(ngModel)]="selectedProductId" (change)="onProductSelect()">
-          <option [value]="null">Select product...</option>
-          <option *ngFor="let prod of products" [value]="prod.id">
-            [{{ prod.group }}] {{ prod.description }} — Rate: {{ prod.rate }}
-          </option>
-        </select>
+      <!-- Search Panel Header -->
+      <div class="search-sub-header">
+        <span class="search-label">
+          SEARCH ITEM <span class="char-hint">(type 3+ characters)</span>
+        </span>
+        <button class="btn-new" (click)="addCustomProduct()">+ New</button>
       </div>
-      <div class="form-row cols-2">
-        <div class="field-outlined">
-          <label>Quantity*</label>
-          <input type="number" [(ngModel)]="newProductQty" min="1" />
+
+      <!-- Search Input -->
+      <div class="search-input-wrapper">
+        <span class="material-icons-outlined search-icon">search</span>
+        <input 
+          type="text" 
+          [(ngModel)]="searchQuery" 
+          (ngModelChange)="onSearchQueryChange()" 
+          placeholder="e.g. roller, bearing, seal kit..." 
+          class="search-field" 
+        />
+        <span 
+          class="material-icons-outlined clear-icon" 
+          *ngIf="searchQuery" 
+          (click)="clearSearch()"
+        >close</span>
+      </div>
+
+      <!-- Condition 1: Less than 3 characters and no items selected -->
+      <div class="empty-placeholder" *ngIf="selectedProductsForForm.length === 0 && searchQuery.length < 3">
+        <span class="material-icons-outlined placeholder-icon">add_shopping_cart</span>
+        <p class="placeholder-text">Search and select items above — you can pick multiple</p>
+      </div>
+
+      <!-- Search Results Dropdown List -->
+      <div class="search-dropdown-panel" *ngIf="searchQuery.length >= 3">
+        <div 
+          class="search-result-row" 
+          *ngFor="let prod of searchResults" 
+          (click)="selectProduct(prod)"
+        >
+          <div class="result-title">{{ prod.description }}</div>
+          <div class="result-subtitle">HSN: 84483990 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ prod.group }}</div>
         </div>
-        <div class="field-outlined">
-          <label>Rate (INR)*</label>
-          <input type="number" [(ngModel)]="newProductRate" min="0" />
+        <div class="search-dropdown-panel empty" *ngIf="searchResults.length === 0">
+          No matching products found. Click <strong>+ New</strong> to add a custom item.
+        </div>
+      </div>
+
+      <!-- Selected Items Cards List -->
+      <div class="selected-items-section" *ngIf="selectedProductsForForm.length > 0">
+        <div class="section-title-row">
+          <span class="section-title">SELECTED ITEMS</span>
+          <span class="selected-badge">{{ selectedProductsForForm.length }}</span>
+        </div>
+        
+        <div class="selected-cards-list">
+          <div class="selected-card" *ngFor="let item of selectedProductsForForm; let idx = index">
+            <div class="selected-card-header">
+              <span class="card-num-title">{{ idx + 1 }}. {{ item.productDescription || 'New Custom Item' }}</span>
+              <button class="card-remove-btn" (click)="removeSelectedFormItem(idx)">&times;</button>
+            </div>
+            
+            <div class="selected-card-body">
+              <!-- Group & Description Row -->
+              <div class="form-grid-3">
+                <div class="form-field">
+                  <label class="form-label">GROUP DESCRIPTION</label>
+                  <input type="text" [(ngModel)]="item.group" class="form-control" />
+                </div>
+                <div class="form-field colspan-2">
+                  <label class="form-label">PRODUCT DESCRIPTION</label>
+                  <input type="text" [(ngModel)]="item.productDescription" class="form-control" />
+                </div>
+              </div>
+              
+              <!-- Specs Row -->
+              <div class="form-grid-4">
+                <div class="form-field">
+                  <label class="form-label">PART NO</label>
+                  <input type="text" [(ngModel)]="item.partNumber" placeholder="Part number" class="form-control" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">UOM</label>
+                  <input type="text" [(ngModel)]="item.uom" class="form-control" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">MAKE</label>
+                  <select [(ngModel)]="item.make" class="form-control">
+                    <option value="">— Select Make —</option>
+                    <option *ngFor="let m of item.makes" [value]="m">{{ m }}</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">MODEL</label>
+                  <select [(ngModel)]="item.model" class="form-control">
+                    <option value="">— Select Model —</option>
+                    <option *ngFor="let mo of item.models" [value]="mo">{{ mo }}</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- Quantity & Rate Row -->
+              <div class="form-grid-4">
+                <div class="form-field">
+                  <label class="form-label">QUANTITY</label>
+                  <input type="number" [(ngModel)]="item.quantity" min="1" class="form-control" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">RATE (INR)</label>
+                  <input type="number" [(ngModel)]="item.rate" min="0" class="form-control" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+    
     <div class="modal-footer">
-      <button class="btn btn-outline" (click)="showProductModal = false">Cancel</button>
-      <button class="btn btn-primary" [disabled]="!selectedProductId" (click)="addProductItem()">Add Item</button>
+      <button class="btn-exit" (click)="showProductModal = false">Exit</button>
+      <button 
+        class="btn btn-primary" 
+        [disabled]="selectedProductsForForm.length === 0" 
+        (click)="addSelectedProducts()"
+      >
+        <span class="material-icons-outlined icon-sm">shopping_cart</span>
+        Add {{ selectedProductsForForm.length > 0 ? selectedProductsForForm.length : '' }} Product{{ selectedProductsForForm.length > 1 ? 's' : '' }}
+      </button>
     </div>
   </div>
 </div>

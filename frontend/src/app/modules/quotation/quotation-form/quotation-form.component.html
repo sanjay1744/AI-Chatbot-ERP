@@ -127,7 +127,7 @@
           <tr *ngFor="let item of quotation.quotationProducts; let idx = index">
             <td>{{ idx + 1 }}</td>
             <td>{{ item.group }}</td>
-            <td>{{ item.productDescription }}</td>
+            <td><div class="text-truncate" [title]="item.productDescription">{{ item.productDescription }}</div></td>
             <td>{{ item.partNumber || '—' }}</td>
             <td>{{ item.make || '—' }}</td>
             <td>{{ item.model || '—' }}</td>
