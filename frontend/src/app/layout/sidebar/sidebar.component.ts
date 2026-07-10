@@ -13,12 +13,26 @@ import { CopilotStateService } from '../../services/copilot-state.service';
 export class SidebarComponent {
   private copilotStateService = inject(CopilotStateService);
 
-  menus = [
-    { name: 'UMS', icon: 'people', isOpen: false, children: [] as any[] },
-    { name: 'Admin', icon: 'settings', isOpen: false, children: [] as any[] },
+  menus: any[] = [
+    {
+      name: 'UMS',
+      icon: 'manage_accounts',
+      isOpen: false,
+      children: [
+        { name: 'Users', link: '/ums/users', icon: 'people' }
+      ]
+    },
+    {
+      name: 'Admin',
+      icon: 'admin_panel_settings',
+      isOpen: false,
+      children: [
+        { name: 'Settings', link: '/admin/settings', icon: 'settings' }
+      ]
+    },
     {
       name: 'Master',
-      icon: 'folder_open',
+      icon: 'storage',
       isOpen: false,
       children: [
         { name: 'Common', link: '/master/common', icon: 'list' },
@@ -29,36 +43,105 @@ export class SidebarComponent {
     },
     {
       name: 'Lead',
-      icon: 'trending_up',
+      icon: 'accessibility_new',
       isOpen: true,
       children: [
-        { name: 'Sales Enquiry', link: '/lead/sales-enquiry', icon: 'assignment' },
-        { name: 'Quotation', link: '/lead/quotation', icon: 'request_quote' },
-        { name: 'Quote Approval', link: '/lead/quote-approval', icon: 'verified' }
+        {
+          name: 'Sales Enquiry',
+          icon: 'assignment',
+          isOpen: true,
+          children: [
+            { name: 'Enquiry', link: '/lead/sales-enquiry', icon: 'assignment' }
+          ]
+        },
+        {
+          name: 'Quotation',
+          icon: 'request_quote',
+          isOpen: true,
+          children: [
+            { name: 'Quotation', link: '/lead/quotation', icon: 'request_quote' },
+            { name: 'Quote Approval', link: '/lead/quote-approval', icon: 'verified' }
+          ]
+        },
+        {
+          name: 'Sales Order',
+          icon: 'shopping_bag',
+          isOpen: false,
+          children: [
+            { name: 'Sales Order', link: '/sales-order/list', icon: 'receipt_long' },
+            { name: 'Sales Order Approval', link: '/sales-order/approval', icon: 'approval' },
+            { name: 'SO - Accounts Approval', link: '/sales-order/accounts-approval', icon: 'account_balance_wallet' }
+          ]
+        },
+        {
+          name: 'Purchase',
+          icon: 'shopping_cart',
+          isOpen: false,
+          children: [
+            { name: 'Purchase Order', link: '/purchase/order', icon: 'receipt_long' }
+          ]
+        },
+        {
+          name: 'Sales',
+          icon: 'local_shipping',
+          isOpen: false,
+          children: [
+            { name: 'Invoice', link: '/sales/invoice', icon: 'description' }
+          ]
+        },
+        {
+          name: 'Replacement',
+          icon: 'swap_horiz',
+          isOpen: false,
+          children: [
+            { name: 'Replacement List', link: '/replacement/list', icon: 'list' }
+          ]
+        }
       ]
     },
     {
-      name: 'Sales Order',
-      icon: 'shopping_cart',
+      name: 'Finance',
+      icon: 'account_balance',
       isOpen: false,
       children: [
-        { name: 'Sales Order', link: '/sales-order/list', icon: 'receipt_long' },
-        { name: 'Sales Order Approval', link: '/sales-order/approval', icon: 'approval' },
-        { name: 'SO - Accounts Approval', link: '/sales-order/accounts-approval', icon: 'account_balance_wallet' }
+        { name: 'General Ledger', link: '/finance/ledger', icon: 'menu_book' }
       ]
     },
-    { name: 'Purchase', icon: 'shopping_bag', isOpen: false, children: [] as any[] },
-    { name: 'Sales', icon: 'storefront', isOpen: false, children: [] as any[] },
-    { name: 'Replacement', icon: 'swap_horiz', isOpen: false, children: [] as any[] },
-    { name: 'Finance', icon: 'account_balance', isOpen: false, children: [] as any[] },
-    { name: 'Production', icon: 'precision_manufacturing', isOpen: false, children: [] as any[] },
-    { name: 'HRMS', icon: 'badge', isOpen: false, children: [] as any[] },
-    { name: 'AI Assistant', icon: 'smart_toy', isOpen: false, children: [] as any[], link: '/ai-assistant' }
+    {
+      name: 'Production',
+      icon: 'factory',
+      isOpen: false,
+      children: [
+        { name: 'Work Order', link: '/production/work-order', icon: 'build' }
+      ]
+    },
+    {
+      name: 'HRMS',
+      icon: 'badge',
+      isOpen: false,
+      children: [
+        { name: 'Employees', link: '/hrms/employees', icon: 'people' }
+      ]
+    },
+    {
+      name: 'AI Assistant',
+      icon: 'smart_toy',
+      link: '/ai-assistant',
+      isOpen: false,
+      children: []
+    }
   ];
 
   toggleMenu(menu: any) {
     if (menu.children && menu.children.length > 0) {
       menu.isOpen = !menu.isOpen;
+    }
+  }
+
+  toggleSubMenu(child: any, event: Event) {
+    event.stopPropagation();
+    if (child.children && child.children.length > 0) {
+      child.isOpen = !child.isOpen;
     }
   }
 

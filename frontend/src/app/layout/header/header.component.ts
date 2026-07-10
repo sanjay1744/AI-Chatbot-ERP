@@ -10,5 +10,13 @@ import { CommonModule } from '@angular/common';
 })
 export class HeaderComponent {
   userName = 'Thalaimalai';
-  userRole = 'Naren-Marketing';
+  userRole = 'Naren Marketing';
+  isUserMenuOpen = false;
+
+  toggleUserMenu(event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.isUserMenuOpen = !this.isUserMenuOpen;
+  }
 }

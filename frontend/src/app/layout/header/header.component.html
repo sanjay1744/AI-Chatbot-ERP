@@ -17,12 +17,35 @@
       <span class="material-icons-outlined">notifications_none</span>
     </button>
 
-    <div class="user-block">
+    <div class="user-block" (click)="toggleUserMenu($event)">
       <div class="user-info">
         <span class="user-name">{{ userName }}</span>
         <span class="user-role">{{ userRole }}</span>
       </div>
-      <span class="material-icons-outlined user-chevron">expand_more</span>
+      <span class="material-icons-outlined user-chevron" [class.rotated]="isUserMenuOpen">expand_more</span>
+
+      @if (isUserMenuOpen) {
+        <div class="user-dropdown-menu" (click)="$event.stopPropagation()">
+          <div class="dropdown-header">
+            <span class="dropdown-user-name">{{ userName }}</span>
+            <span class="dropdown-user-role">{{ userRole }}</span>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="javascript:void(0)">
+            <span class="material-icons dropdown-item-icon">person</span>
+            <span>My Profile</span>
+          </a>
+          <a class="dropdown-item" href="javascript:void(0)">
+            <span class="material-icons dropdown-item-icon">settings</span>
+            <span>Settings</span>
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item logout" href="javascript:void(0)">
+            <span class="material-icons dropdown-item-icon">logout</span>
+            <span>Logout</span>
+          </a>
+        </div>
+      }
     </div>
   </div>
 </header>
