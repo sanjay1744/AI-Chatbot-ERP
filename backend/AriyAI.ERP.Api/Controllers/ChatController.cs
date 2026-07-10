@@ -926,6 +926,9 @@ SQL RULES & TIPS:
 - When comparing multiple agents, customers, or products, select their name column and use GROUP BY (e.g., SELECT AgentName, SUM(Qty * Rate) FROM SalesRecords WHERE AgentName IN ('AARU TECH', 'NBM') GROUP BY AgentName;). Do NOT calculate a single aggregated sum without GROUP BY.
 - CRITICAL: Never write SELECT SUM(...) WHERE AgentName = 'A' OR AgentName = 'B' without GROUP BY, because that combines their sales together instead of comparing them. You must always SELECT the AgentName column and use GROUP BY AgentName.
 - CRITICAL: Never use aggregate functions like SUM(), AVG(), COUNT(), etc. in the WHERE clause (e.g., WHERE SUM(...) > 100000 is invalid). To filter on aggregated values, you MUST use the HAVING clause after GROUP BY (e.g., GROUP BY CustomerName HAVING SUM(Qty * Rate) > 100000).
+- TOP / LEAST / BEST / WORST PERFORMERS: If asked for the highest, lowest, best, worst, top, or least performing agent, customer, or product (based on revenue or sales), you MUST group by the entity name, order by the aggregated revenue `SUM(Qty * Rate)` in DESC (for top/best/highest) or ASC (for least/worst/lowest) order, and use `LIMIT 1` (or the requested limit). Never try to use aggregate functions like `SUM()` in the `WHERE` clause.
+  - Example (best performing agent): SELECT AgentName, SUM(Qty * Rate) AS TotalRevenue FROM SalesRecords GROUP BY AgentName ORDER BY TotalRevenue DESC LIMIT 1;
+  - Example (least performing agent): SELECT AgentName, SUM(Qty * Rate) AS TotalRevenue FROM SalesRecords GROUP BY AgentName ORDER BY TotalRevenue ASC LIMIT 1;
 - Calculate Sales revenue as: Qty * Rate
 - Use LIKE with wildcards for text comparison to avoid spelling or casing mismatch (e.g. AgentName LIKE '%Thalaimalai%' or CustomerName LIKE '%Premier%').
 - For date ranges, compare InvoiceDate string like: InvoiceDate >= '2025-01-01'
