@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -81,6 +81,18 @@ export class EnquiryFormComponent implements OnInit {
     this.loadMasters();
     this.checkRoute();
     this.filterContacts();
+    this.checkExtractedProducts();
+  }
+
+  @HostListener('window:extractedEmailProductsLoaded')
+  checkExtractedProducts() {
+    const data = localStorage.getItem('extractedEmailProducts');
+    if (data) {
+      const items = JSON.parse(data);
+      this.enquiry.enquiryProducts = items;
+      this.activeTab = 'products'; // Switch to Product List tab
+      localStorage.removeItem('extractedEmailProducts');
+    }
   }
 
   loadMasters() {

@@ -16,7 +16,9 @@
     <div class="notifications-wrapper">
       <button class="icon-btn notification-btn" (click)="toggleNotifications($event)">
         <span class="material-icons-outlined">notifications_none</span>
-        <span class="red-badge">2</span>
+        @if (unreadMailsCount > 0) {
+          <span class="red-badge">{{ unreadMailsCount }}</span>
+        }
       </button>
 
       @if (isNotificationsOpen) {
@@ -37,16 +39,16 @@
               <!-- Header of mails tab -->
               <div class="notif-body-header">
                 <span class="recent-title">Recent Messages</span>
-                <button class="btn-sync-gmail" (click)="syncGmail()">
-                  <span class="material-icons-outlined sync-icon">sync</span>
-                  Sync Gmail
+                <button class="btn-sync-gmail" [class.syncing]="isSyncing" [disabled]="isSyncing" (click)="syncGmail()">
+                  <span class="material-icons-outlined sync-icon" [class.spinning]="isSyncing">sync</span>
+                  {{ isSyncing ? 'Syncing...' : 'Sync Gmail' }}
                 </button>
               </div>
               
               <!-- Mails list -->
               <div class="mails-list-container">
                 @for (mail of mockMails; track mail.id) {
-                  <div class="mail-row-item">
+                  <div class="mail-row-item" [class.unread]="mail.isRead === false" (click)="openMailDetails(mail)">
                     <div class="mail-icon-circle">
                       <span class="material-icons-outlined">mail</span>
                     </div>
@@ -106,4 +108,68 @@
       }
     </div>
   </div>
+
+  <!-- Email Details Modal -->
+  @if (isEmailDetailsOpen && selectedMail) {
+    <div class="modal-overlay notif-modal-overlay">
+      <div class="modal-box email-details-modal">
+        <div class="modal-header">
+          <h3>Email Details</h3>
+          <button class="modal-close" (click)="isEmailDetailsOpen = false">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+        
+        <div class="modal-body email-details-body">
+          <div class="email-headers-section">
+            <div class="header-field">
+              <strong>From:</strong> <span>{{ selectedMail.from }}</span>
+            </div>
+            <div class="header-field">
+              <strong>To:</strong> <span>{{ selectedMail.to }}</span>
+            </div>
+            <div class="header-field">
+              <strong>Date:</strong> <span>{{ selectedMail.date }}</span>
+            </div>
+            <div class="header-field">
+              <strong>Subject:</strong> <span>{{ selectedMail.subject }}</span>
+            </div>
+          </div>
+          
+          <div class="email-body-content">
+            {{ selectedMail.body }}
+          </div>
+        </div>
+        
+        <div class="modal-footer email-details-footer">
+          <button class="btn btn-secondary modal-close-btn" (click)="isEmailDetailsOpen = false">Close</button>
+          <button class="btn btn-ai-process" (click)="aiProcessMail()">
+            <span class="material-icons-outlined star-icon">auto_awesome</span>
+            AI Process
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+  
+  <!-- AI Process Loading Screen overlay -->
+  @if (isExtracting) {
+    <div class="loading-overlay">
+      <div class="loading-container">
+        <span class="material-icons-outlined loading-spinner">sync</span>
+        <div class="loading-text">Extracting products using AI...</div>
+      </div>
+    </div>
+  }
+
+  <!-- Toast Notification -->
+  @if (isToastVisible) {
+    <div class="sync-toast" [class.toast-success]="toastType === 'success'" [class.toast-error]="toastType === 'error'" [class.toast-info]="toastType === 'info'">
+      <span class="material-icons-outlined toast-icon">{{ toastType === 'success' ? 'check_circle' : toastType === 'info' ? 'info' : 'error' }}</span>
+      <span class="toast-msg">{{ toastMessage }}</span>
+      <button class="toast-close" (click)="isToastVisible = false">
+        <span class="material-icons-outlined">close</span>
+      </button>
+    </div>
+  }
 </header>

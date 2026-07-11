@@ -57,6 +57,7 @@ export interface EnquiryProduct {
   model: string;
   quantity: number;
   rate: number;
+  mapping?: string;
 }
 
 export interface Quotation {

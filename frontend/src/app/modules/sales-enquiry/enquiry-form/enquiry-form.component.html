@@ -126,6 +126,7 @@
             <th>Model</th>
             <th>Quantity</th>
             <th>Rate</th>
+            <th>Mapping</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -139,6 +140,11 @@
             <td>{{ item.model || '—' }}</td>
             <td>{{ item.quantity }}</td>
             <td>{{ item.rate | number:'1.2-2' }}</td>
+            <td>
+              <span class="badge" [class.badge-approved]="item.mapping === 'Matched' || !item.mapping" [class.badge-rejected]="item.mapping === 'Unmapped'">
+                {{ item.mapping || 'Matched' }}
+              </span>
+            </td>
             <td style="text-align: center;">
               <button class="icon-action-btn delete" (click)="removeProductItem(idx)">
                 <span class="material-icons-outlined icon-sm">delete</span>
@@ -146,7 +152,7 @@
             </td>
           </tr>
           <tr *ngIf="enquiry.enquiryProducts.length === 0">
-            <td colspan="9" class="empty-state">No products added. Click "New Item" to add.</td>
+            <td colspan="10" class="empty-state">No products added. Click "New Item" to add.</td>
           </tr>
         </tbody>
       </table>
