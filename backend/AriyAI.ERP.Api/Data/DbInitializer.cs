@@ -150,6 +150,110 @@ Augustine",
                 });
                 context.SaveChanges();
             }
+
+            // Seed products from Excel if empty
+            if (!context.Products.Any())
+            {
+                string excelPath = @"d:\AriyAI\chatbot_\AI_Data\products_table.xlsx";
+                if (File.Exists(excelPath))
+                {
+                    try
+                    {
+                        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                        using (var stream = File.Open(excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            using (var reader = ExcelDataReader.ExcelReaderFactory.CreateReader(stream))
+                            {
+                                var result = reader.AsDataSet(new ExcelDataReader.ExcelDataSetConfiguration()
+                                {
+                                    ConfigureDataTable = (_) => new ExcelDataReader.ExcelDataTableConfiguration()
+                                    {
+                                        UseHeaderRow = true
+                                    }
+                                });
+
+                                if (result.Tables.Count > 0)
+                                {
+                                    var table = result.Tables[0];
+                                    
+                                    // Find column names
+                                    int groupCol = -1;
+                                    int descCol = -1;
+                                    int partCol = -1;
+                                    int makeCol = -1;
+                                    int modelCol = -1;
+                                    int rateCol = -1;
+
+                                    for (int i = 0; i < table.Columns.Count; i++)
+                                    {
+                                        string colName = table.Columns[i].ColumnName.ToLowerInvariant().Replace(" ", "").Replace("_", "");
+                                        if (colName.Contains("group")) groupCol = i;
+                                        else if (colName.Contains("desc") || colName.Contains("itemname") || colName.Contains("product")) descCol = i;
+                                        else if (colName.Contains("part") || colName.Contains("code")) partCol = i;
+                                        else if (colName.Contains("make") || colName.Contains("brand") || colName.Contains("brandname")) makeCol = i;
+                                        else if (colName.Contains("model")) modelCol = i;
+                                        else if (colName.Contains("rate") || colName.Contains("price")) rateCol = i;
+                                    }
+
+                                    var products = new List<Product>();
+                                    foreach (DataRow row in table.Rows)
+                                    {
+                                        // Ignore empty rows
+                                        if (row.ItemArray.All(x => x == null || x == DBNull.Value || string.IsNullOrWhiteSpace(x.ToString())))
+                                            continue;
+
+                                        var product = new Product();
+                                        
+                                        if (groupCol != -1) product.Group = row[groupCol]?.ToString()?.Trim() ?? "";
+                                        if (descCol != -1) product.Description = row[descCol]?.ToString()?.Trim() ?? "";
+                                        if (partCol != -1) product.PartNumber = row[partCol]?.ToString()?.Trim() ?? "";
+                                        if (makeCol != -1) product.Make = row[makeCol]?.ToString()?.Trim() ?? "";
+                                        if (modelCol != -1) product.Model = row[modelCol]?.ToString()?.Trim() ?? "";
+                                        
+                                        if (rateCol != -1)
+                                        {
+                                            var rateStr = row[rateCol]?.ToString();
+                                            if (decimal.TryParse(rateStr, out decimal rateVal))
+                                            {
+                                                product.Rate = rateVal;
+                                            }
+                                        }
+
+                                        // Fallback if missing crucial fields but has others
+                                        if (string.IsNullOrEmpty(product.Description) && !string.IsNullOrEmpty(product.PartNumber))
+                                        {
+                                            product.Description = product.PartNumber;
+                                        }
+
+                                        if (!string.IsNullOrEmpty(product.Description))
+                                        {
+                                            products.Add(product);
+                                        }
+                                    }
+
+                                     if (products.Count > 0)
+                                     {
+                                         context.Products.AddRange(products);
+                                         context.SaveChanges();
+
+                                         try
+                                         {
+                                             var summaryLines = new List<string> { $"Seeded {products.Count} products from Excel:" };
+                                             summaryLines.AddRange(products.Take(20).Select(p => $"Group: {p.Group}, Make: {p.Make}, PartNumber: {p.PartNumber}, Description: {p.Description}, Rate: {p.Rate}"));
+                                             File.WriteAllLines(@"d:\AriyAI\chatbot_\excel_products_summary.txt", summaryLines);
+                                         }
+                                         catch {}
+                                     }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error seeding products from Excel: {ex.Message}");
+                    }
+                }
+            }
         }
     }
 }

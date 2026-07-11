@@ -1,0 +1,21 @@
+Seeded 381 products from Excel:
+Group: , Make: ABB, PartNumber: , Description: ABB Contactor A9-30-10 9A 3P, Rate: 1250
+Group: , Make: ABB, PartNumber: , Description: ABB Contactor A16-30-10 16A 3P, Rate: 1550
+Group: , Make: ABB, PartNumber: , Description: ABB Contactor A26-30-10 26A 3P, Rate: 1950
+Group: , Make: ABB, PartNumber: , Description: ABB Contactor A50-30-11 50A 3P, Rate: 3200
+Group: , Make: ABB, PartNumber: , Description: ABB Contactor A75-30-11 75A 3P, Rate: 4500
+Group: , Make: ABB, PartNumber: , Description: ABB Thermal Overload Relay TA25DU 2.8-4.0A, Rate: 980
+Group: , Make: ABB, PartNumber: , Description: ABB Thermal Overload Relay TA25DU 7.5-11A, Rate: 1050
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 6A 1P C Curve, Rate: 185
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 10A 1P C Curve, Rate: 185
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 16A 1P C Curve, Rate: 190
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 20A 1P C Curve, Rate: 195
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 25A 1P C Curve, Rate: 200
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 32A 1P C Curve, Rate: 210
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 63A 1P C Curve, Rate: 350
+Group: , Make: Siemens, PartNumber: , Description: Siemens MCB 32A 3P C Curve, Rate: 620
+Group: , Make: Schneider, PartNumber: , Description: Schneider Contactor LC1D09 9A 3P 220V, Rate: 1350
+Group: , Make: Schneider, PartNumber: , Description: Schneider Contactor LC1D18 18A 3P 220V, Rate: 1750
+Group: , Make: Schneider, PartNumber: , Description: Schneider Contactor LC1D32 32A 3P 220V, Rate: 2450
+Group: , Make: Schneider, PartNumber: , Description: Schneider Thermal Overload Relay LRD08 2.5-4A, Rate: 890
+Group: , Make: Schneider, PartNumber: , Description: Schneider Thermal Overload Relay LRD14 7-10A, Rate: 920

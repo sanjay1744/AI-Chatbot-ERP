@@ -80,7 +80,7 @@ namespace AriyAI.ERP.Api.Services
                     item.Make = bestMatch.Make;
                     item.Model = bestMatch.Model;
                     item.Rate = bestMatch.Rate;
-                    item.Mapping = "Matched";
+                    item.Mapping = "Mapped";
                 }
                 else
                 {

@@ -331,10 +331,10 @@ Augustine`
         alert('Product extraction failed. Fallback to mock data.');
         // Fallback mock data mapping for local demo validation
         const extractedItems = [
-          { group: 'ABB', productDescription: 'ABB Contactor A16-30-10 16A 3P', partNumber: 'A16-30-10', make: 'ABB', model: 'A16-30-10', quantity: 4, rate: 1550, mapping: 'Matched' },
-          { group: 'Siemens', productDescription: 'Siemens MCB 32A 3P C Curve', partNumber: '5SL6332-7', make: 'Siemens', model: '5SL6332-7', quantity: 2, rate: 620, mapping: 'Matched' },
-          { group: 'Schneider', productDescription: 'Schneider CRN Enclosure 300×300×200mm', partNumber: 'NSYCRN33200', make: 'Schneider', model: 'NSYCRN33200', quantity: 1, rate: 2800, mapping: 'Matched' },
-          { group: 'Generic', productDescription: 'DIN Rail 35mm Standard 1 Meter', partNumber: 'DIN-35-1M', make: 'Generic', model: 'DIN-35-1M', quantity: 15, rate: 85, mapping: 'Matched' },
+          { group: 'ABB', productDescription: 'ABB Contactor A16-30-10 16A 3P', partNumber: 'A16-30-10', make: 'ABB', model: 'A16-30-10', quantity: 4, rate: 1550, mapping: 'Mapped' },
+          { group: 'Siemens', productDescription: 'Siemens MCB 32A 3P C Curve', partNumber: '5SL6332-7', make: 'Siemens', model: '5SL6332-7', quantity: 2, rate: 620, mapping: 'Mapped' },
+          { group: 'Schneider', productDescription: 'Schneider CRN Enclosure 300×300×200mm', partNumber: 'NSYCRN33200', make: 'Schneider', model: 'NSYCRN33200', quantity: 1, rate: 2800, mapping: 'Mapped' },
+          { group: 'Generic', productDescription: 'DIN Rail 35mm Standard 1 Meter', partNumber: 'DIN-35-1M', make: 'Generic', model: 'DIN-35-1M', quantity: 15, rate: 85, mapping: 'Mapped' },
           { group: 'Unmapped', productDescription: 'savio Pulley Savio Timing Belt Pulley 15T', partNumber: '15T', make: '—', model: '15T', quantity: 10, rate: 0, mapping: 'Unmapped' }
         ];
         localStorage.setItem('extractedEmailProducts', JSON.stringify(extractedItems));

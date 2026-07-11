@@ -141,8 +141,8 @@
             <td>{{ item.quantity }}</td>
             <td>{{ item.rate | number:'1.2-2' }}</td>
             <td>
-              <span class="badge" [class.badge-approved]="item.mapping === 'Matched' || !item.mapping" [class.badge-rejected]="item.mapping === 'Unmapped'">
-                {{ item.mapping || 'Matched' }}
+              <span class="badge" [class.badge-approved]="item.mapping === 'Mapped' || item.mapping === 'Matched' || !item.mapping" [class.badge-rejected]="item.mapping === 'Unmapped'">
+                {{ (item.mapping === 'Matched' || item.mapping === 'Mapped' || !item.mapping) ? 'Mapped' : 'Unmapped' }}
               </span>
             </td>
             <td style="text-align: center;">
