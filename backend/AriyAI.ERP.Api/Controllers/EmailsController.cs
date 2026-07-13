@@ -115,7 +115,7 @@ namespace AriyAI.ERP.Api.Controllers
         private bool IsValidProductLine(ExtractedProductDto item)
         {
             // 1. If the item fuzzy-matched successfully to the catalog, keep it
-            if (item.Mapping == "Matched")
+            if (item.Mapping == "Mapped")
             {
                 return true;
             }

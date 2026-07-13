@@ -148,12 +148,12 @@ namespace AriyAI.ERP.Api.Services
                             if (words.Count > 0)
                             {
                                 int currentWordIdx = 0;
-                                if (brandColIdx != -1 && currentWordIdx < words.Count)
+                                if (brandColIdx != -1 && currentWordIdx < words.Count && IsValidMake(words[currentWordIdx]))
                                 {
                                     make = words[currentWordIdx];
                                     currentWordIdx++;
                                 }
-                                if (partColIdx != -1 && currentWordIdx < words.Count)
+                                if (partColIdx != -1 && currentWordIdx < words.Count && IsValidPartNumber(words[currentWordIdx]))
                                 {
                                     partCode = words[currentWordIdx];
                                     currentWordIdx++;
@@ -207,6 +207,7 @@ namespace AriyAI.ERP.Api.Services
                 // Clean leading list indicators / serial numbers
                 line = Regex.Replace(line, @"^\s*\(?\d+\)?[\s\.\-\/]*", "", RegexOptions.IgnoreCase).Trim();
                 line = Regex.Replace(line, @"^\s*sl\s*no\b[\s\.\-\/]*", "", RegexOptions.IgnoreCase).Trim();
+                line = Regex.Replace(line, @"^[–—\-\*\•\.\s\+]+", "").Trim(); // Clean leading bullets/dashes/spaces
 
                 if (line.Length < 3) continue;
 
@@ -295,6 +296,33 @@ namespace AriyAI.ERP.Api.Services
                 string productName = remainder;
                 productName = Regex.Replace(productName, @"^[\s\-\:\,\.\/]+|[\s\-\:\,\.\/]+$", "").Trim();
 
+                if (productCode == null)
+                {
+                    // Fallback to finding any code-like word in the remaining name
+                    var codePattern = new Regex(@"\b([A-Z0-9][\w\-\.]{2,20})\b", RegexOptions.IgnoreCase);
+                    var codes = codePattern.Matches(productName);
+                    var ignoreList = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        "abb", "siemens", "schneider", "omron", "qty", "nos", "pcs", "mcb", "mccb", "s.no", "part", "description", "item", "pieces"
+                    };
+
+                    foreach (Match match in codes)
+                    {
+                        string candidate = match.Value;
+                        if (ignoreList.Contains(candidate)) continue;
+
+                        bool hasDigit = candidate.Any(char.IsDigit);
+                        bool hasLetter = candidate.Any(char.IsLetter);
+                        bool hasSymbol = candidate.Contains("-") || candidate.Contains(".");
+
+                        if ((hasDigit && hasLetter) || hasSymbol)
+                        {
+                            productCode = candidate;
+                            break;
+                        }
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(productCode) && !string.IsNullOrEmpty(productName))
                 {
                     if (!NormalizeCode(productName).Contains(NormalizeCode(productCode)))
@@ -350,6 +378,30 @@ namespace AriyAI.ERP.Api.Services
             text = Regex.Replace(text, @"(\d+(?:\.\d+)?)\s*[-.:\s]*\s*(nos|qty|pcs|pieces|no|q|qly|qtyi|pos)\b", " $1 $2", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"\b(qty|quantity|nos|pcs|pieces|q|qly|qtyi|pos)[-.:\s]*(\d+(?:\.\d+)?)\b", "$1 $2", RegexOptions.IgnoreCase);
             return text.Trim();
+        }
+
+        private bool IsValidPartNumber(string code)
+        {
+            if (string.IsNullOrEmpty(code)) return false;
+            if (code == "-") return false;
+            var lower = code.ToLower();
+            var ignoreWords = new[] { "confirm", "please", "select", "dear", "hello", "brand", "make", "model", "qty", "nos", "pcs", "part", "code", "description", "item" };
+            if (ignoreWords.Contains(lower)) return false;
+
+            bool hasDigit = code.Any(char.IsDigit);
+            bool hasLetter = code.Any(char.IsLetter);
+            bool hasSymbol = code.Contains("-") || code.Contains(".");
+
+            return (hasDigit && hasLetter) || hasSymbol;
+        }
+
+        private bool IsValidMake(string make)
+        {
+            if (string.IsNullOrEmpty(make)) return false;
+            var lower = make.ToLower();
+            var ignoreWords = new[] { "please", "confirm", "dear", "hello", "hi", "team", "we", "you", "brand", "make", "model", "qty" };
+            if (ignoreWords.Contains(lower)) return false;
+            return true;
         }
     }
 }

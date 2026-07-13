@@ -151,9 +151,16 @@ Augustine",
                 context.SaveChanges();
             }
 
-            // Seed products from Excel if empty
-            if (!context.Products.Any())
+            // Seed products from Excel if empty or if seeded with empty part numbers
+            if (!context.Products.Any() || context.Products.Any(p => string.IsNullOrEmpty(p.PartNumber)))
             {
+                // Clear existing empty-partnumber products to force correct re-seeding
+                if (context.Products.Any())
+                {
+                    context.Products.RemoveRange(context.Products);
+                    context.SaveChanges();
+                }
+
                 string excelPath = @"d:\AriyAI\chatbot_\AI_Data\products_table.xlsx";
                 if (File.Exists(excelPath))
                 {
@@ -188,11 +195,11 @@ Augustine",
                                     {
                                         string colName = table.Columns[i].ColumnName.ToLowerInvariant().Replace(" ", "").Replace("_", "");
                                         if (colName.Contains("group")) groupCol = i;
-                                        else if (colName.Contains("desc") || colName.Contains("itemname") || colName.Contains("product")) descCol = i;
-                                        else if (colName.Contains("part") || colName.Contains("code")) partCol = i;
                                         else if (colName.Contains("make") || colName.Contains("brand") || colName.Contains("brandname")) makeCol = i;
                                         else if (colName.Contains("model")) modelCol = i;
                                         else if (colName.Contains("rate") || colName.Contains("price")) rateCol = i;
+                                        else if (colName.Contains("part") || colName.Contains("code")) partCol = i; // Match code first to avoid "product" conflict in description
+                                        else if (colName.Contains("desc") || colName.Contains("itemname") || colName.Contains("product")) descCol = i;
                                     }
 
                                     var products = new List<Product>();
@@ -223,6 +230,11 @@ Augustine",
                                         if (string.IsNullOrEmpty(product.Description) && !string.IsNullOrEmpty(product.PartNumber))
                                         {
                                             product.Description = product.PartNumber;
+                                        }
+
+                                        if (string.IsNullOrEmpty(product.Model) && !string.IsNullOrEmpty(product.PartNumber))
+                                        {
+                                            product.Model = product.PartNumber;
                                         }
 
                                         if (!string.IsNullOrEmpty(product.Description))
