@@ -2,6 +2,7 @@ import { Component, HostListener, inject, OnInit, OnDestroy, ChangeDetectorRef }
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { timeout, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 
@@ -16,6 +17,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
+  private sanitizer = inject(DomSanitizer);
 
   userName = 'Thalaimalai';
   userRole = 'Naren Marketing';
@@ -28,6 +30,18 @@ export class HeaderComponent implements OnInit, OnDestroy {
   // Email Details Modal State
   isEmailDetailsOpen = false;
   selectedMail: any = null;
+
+  // Excel Preview Modal State
+  isPreviewOpen = false;
+  isPreviewLoading = false;
+  previewFilename = '';
+  previewSheets: any[] = [];
+  activePreviewSheetIdx = 0;
+
+  // PDF Preview Modal State
+  isPdfPreviewOpen = false;
+  pdfUrl: SafeResourceUrl | null = null;
+  pdfFilename = '';
   
   // Toast notification state
   toastMessage = '';
@@ -171,6 +185,7 @@ Augustine`
             rawFrom: email.sender,
             rawTo: email.recipient,
             rawDate: email.receivedAt || email.received_at,
+            attachments: (email.attachmentsJson || email.attachments_json) ? JSON.parse(email.attachmentsJson || email.attachments_json) : [],
             isRead: email.isRead
           }));
         }
@@ -292,7 +307,8 @@ Augustine`
       to: mail.rawTo || 'sanjay.personal987@gmail.com',
       date: mail.rawDate ? this.formatEmailDate(mail.rawDate) : mail.time,
       subject: mail.subject,
-      body: mail.rawBody || (this.mailDetailsMap[mail.id] ? this.mailDetailsMap[mail.id].body : 'Email content loading...')
+      body: mail.rawBody || (this.mailDetailsMap[mail.id] ? this.mailDetailsMap[mail.id].body : 'Email content loading...'),
+      attachments: mail.attachments || []
     };
     this.isEmailDetailsOpen = true;
     this.isNotificationsOpen = false;
@@ -347,6 +363,50 @@ Augustine`
         });
       }
     });
+  }
+
+  openAttachment(att: any) {
+    if (!this.selectedMail) return;
+    const isPdf = att.filename?.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      const rawUrl = `http://localhost:5022/api/emails/${this.selectedMail.id}/attachments/${encodeURIComponent(att.filename)}`;
+      this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(rawUrl);
+      this.pdfFilename = att.filename;
+      this.isPdfPreviewOpen = true;
+    } else {
+      this.handleOpenPreview(att.filename);
+    }
+  }
+
+  handleOpenPreview(filename: string) {
+    if (!this.selectedMail) return;
+    this.isPreviewLoading = true;
+    this.previewFilename = filename;
+    this.isPreviewOpen = true;
+    this.previewSheets = [];
+    this.activePreviewSheetIdx = 0;
+
+    this.http.get<any>(`http://localhost:5022/api/emails/${this.selectedMail.id}/attachments/${encodeURIComponent(filename)}/preview`).subscribe({
+      next: (data) => {
+        this.isPreviewLoading = false;
+        this.previewSheets = data.sheets || [];
+      },
+      error: (err) => {
+        this.isPreviewLoading = false;
+        alert('Failed to parse Excel sheet preview.');
+        this.isPreviewOpen = false;
+      }
+    });
+  }
+
+  getExcelColumnLabel(index: number): string {
+    let label = '';
+    let temp = index;
+    while (temp >= 0) {
+      label = String.fromCharCode((temp % 26) + 65) + label;
+      temp = Math.floor(temp / 26) - 1;
+    }
+    return label;
   }
 
   showToast(message: string, type: 'success' | 'error' | 'info') {

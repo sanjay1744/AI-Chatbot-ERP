@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MimeKit;
 using MailKit.Net.Smtp;
+using ExcelDataReader;
+using System.Data;
 using AriyAI.ERP.Api.Data;
 using AriyAI.ERP.Api.Models;
 using AriyAI.ERP.Api.Services;
@@ -100,14 +102,88 @@ namespace AriyAI.ERP.Api.Controllers
             email.IsRead = true;
             await _db.SaveChangesAsync();
 
-            // Run Regex extraction
-            var extracted = _extractionService.ExtractProducts(email.Body);
+            var attachments = new List<EmailAttachmentDto>();
+            if (!string.IsNullOrEmpty(email.AttachmentsJson))
+            {
+                try
+                {
+                    attachments = System.Text.Json.JsonSerializer.Deserialize<List<EmailAttachmentDto>>(email.AttachmentsJson) ?? new();
+                }
+                catch {}
+            }
+
+            List<ExtractedProductDto>? extracted = null;
+            bool isExcelSource = false;
+
+            // Check for Excel attachments first
+            var excelAttachment = attachments.FirstOrDefault(att => 
+                !string.IsNullOrEmpty(att.savedPath) && 
+                (att.filename.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || 
+                 att.filename.EndsWith(".xls", StringComparison.OrdinalIgnoreCase)));
+
+            // Check for PDF attachments
+            var pdfAttachment = attachments.FirstOrDefault(att => 
+                !string.IsNullOrEmpty(att.savedPath) && 
+                att.filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase));
+
+            if (excelAttachment != null)
+            {
+                string fullPath = Path.Combine(Directory.GetCurrentDirectory(), excelAttachment.savedPath);
+                if (System.IO.File.Exists(fullPath))
+                {
+                    try
+                    {
+                        var excelParser = new ExcelParsingService();
+                        extracted = excelParser.ParseExcelProducts(fullPath);
+                        isExcelSource = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing Excel attachment: {ex.Message}");
+                    }
+                }
+            }
+
+            if (extracted == null && pdfAttachment != null)
+            {
+                string fullPath = Path.Combine(Directory.GetCurrentDirectory(), pdfAttachment.savedPath);
+                if (System.IO.File.Exists(fullPath))
+                {
+                    try
+                    {
+                        var pdfParser = new PdfParsingService();
+                        string pdfText = pdfParser.ParsePdfText(fullPath);
+                        if (!string.IsNullOrWhiteSpace(pdfText))
+                        {
+                            extracted = _extractionService.ExtractProducts(pdfText);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing PDF attachment: {ex.Message}");
+                    }
+                }
+            }
+
+            // Fallback to extracting from the email body text
+            if (extracted == null)
+            {
+                extracted = _extractionService.ExtractProducts(email.Body);
+            }
 
             // Run Fuzzy catalog matching
             var matched = _matchingService.MatchProducts(extracted);
 
-            // Filter out conversational greetings, signatures, and noise phrases
-            var filtered = matched.Where(item => IsValidProductLine(item)).ToList();
+            // Filter out conversational greetings, signatures, and noise phrases (skip for Excel source)
+            List<ExtractedProductDto> filtered;
+            if (isExcelSource)
+            {
+                filtered = matched;
+            }
+            else
+            {
+                filtered = matched.Where(item => IsValidProductLine(item)).ToList();
+            }
 
             return Ok(filtered);
         }
@@ -226,6 +302,233 @@ Naren Textile Engineers India Pvt. Ltd.";
                 return StatusCode(500, new { detail = $"SMTP transmission failed: {ex.Message}" });
             }
         }
+
+        [HttpGet("{emailId}/attachments/{filename}")]
+        public async Task<IActionResult> DownloadEmailAttachment(int emailId, string filename)
+        {
+            var email = await _db.Emails.FindAsync(emailId);
+            if (email == null) return NotFound();
+
+            var attachments = new List<EmailAttachmentDto>();
+            if (!string.IsNullOrEmpty(email.AttachmentsJson))
+            {
+                try
+                {
+                    attachments = System.Text.Json.JsonSerializer.Deserialize<List<EmailAttachmentDto>>(email.AttachmentsJson) ?? new();
+                }
+                catch {}
+            }
+
+            var att = attachments.FirstOrDefault(a => string.Equals(a.filename, filename, StringComparison.OrdinalIgnoreCase));
+            if (att == null) return NotFound();
+
+            string? savedPath = att.savedPath;
+            if (string.IsNullOrEmpty(savedPath) || !System.IO.File.Exists(Path.Combine(Directory.GetCurrentDirectory(), savedPath)))
+            {
+                // Try to recover dynamically from Gmail IMAP
+                savedPath = await TryRecoverAttachmentFromImap(email, filename);
+            }
+
+            if (string.IsNullOrEmpty(savedPath)) return NotFound();
+            string fullPath = Path.Combine(Directory.GetCurrentDirectory(), savedPath);
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+            string contentType = att.contentType ?? "application/octet-stream";
+
+            if (filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return File(bytes, "application/pdf");
+            }
+            return File(bytes, contentType, filename);
+        }
+
+        [HttpGet("{emailId}/attachments/{filename}/preview")]
+        public async Task<IActionResult> PreviewEmailAttachment(int emailId, string filename)
+        {
+            var email = await _db.Emails.FindAsync(emailId);
+            if (email == null) return NotFound();
+
+            var attachments = new List<EmailAttachmentDto>();
+            if (!string.IsNullOrEmpty(email.AttachmentsJson))
+            {
+                try
+                {
+                    attachments = System.Text.Json.JsonSerializer.Deserialize<List<EmailAttachmentDto>>(email.AttachmentsJson) ?? new();
+                }
+                catch {}
+            }
+
+            var att = attachments.FirstOrDefault(a => string.Equals(a.filename, filename, StringComparison.OrdinalIgnoreCase));
+            if (att == null) return NotFound();
+
+            string? savedPath = att.savedPath;
+            if (string.IsNullOrEmpty(savedPath) || !System.IO.File.Exists(Path.Combine(Directory.GetCurrentDirectory(), savedPath)))
+            {
+                // Try to recover dynamically from Gmail IMAP
+                savedPath = await TryRecoverAttachmentFromImap(email, filename);
+            }
+
+            if (string.IsNullOrEmpty(savedPath)) return NotFound();
+            string fullPath = Path.Combine(Directory.GetCurrentDirectory(), savedPath);
+
+            try
+            {
+                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                using (var stream = System.IO.File.Open(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    using (var reader = ExcelDataReader.ExcelReaderFactory.CreateReader(stream))
+                    {
+                        var result = reader.AsDataSet(new ExcelDataReader.ExcelDataSetConfiguration()
+                        {
+                            ConfigureDataTable = (_) => new ExcelDataReader.ExcelDataTableConfiguration()
+                            {
+                                UseHeaderRow = false
+                            }
+                        });
+
+                        var sheetsList = new List<object>();
+                        foreach (DataTable table in result.Tables)
+                        {
+                            var rowsList = new List<List<string>>();
+                            foreach (DataRow row in table.Rows)
+                            {
+                                var cellsList = row.ItemArray
+                                    .Select(cell => cell?.ToString() ?? "")
+                                    .ToList();
+                                rowsList.Add(cellsList);
+                            }
+
+                            sheetsList.Add(new
+                            {
+                                name = table.TableName,
+                                rows = rowsList
+                            });
+                        }
+
+                        return Ok(new { sheets = sheetsList });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { detail = $"Failed to parse Excel: {ex.Message}" });
+            }
+        }
+
+        private async Task<string?> TryRecoverAttachmentFromImap(Email email, string filename)
+        {
+            var user = Environment.GetEnvironmentVariable("EMAIL_USER");
+            var password = Environment.GetEnvironmentVariable("EMAIL_PASSWORD");
+            var server = Environment.GetEnvironmentVariable("IMAP_SERVER") ?? "imap.gmail.com";
+            var portStr = Environment.GetEnvironmentVariable("IMAP_PORT") ?? "993";
+            int port = int.TryParse(portStr, out int p) ? p : 993;
+
+            if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(email.MessageId))
+            {
+                return null;
+            }
+
+            try
+            {
+                using var client = new MailKit.Net.Imap.ImapClient();
+                client.Timeout = 15000;
+                await client.ConnectAsync(server, port, true);
+                await client.AuthenticateAsync(user, password);
+
+                var inbox = client.Inbox;
+                await inbox.OpenAsync(MailKit.FolderAccess.ReadOnly);
+
+                // Search for the message by Message-ID header
+                var query = MailKit.Search.SearchQuery.HeaderContains("Message-ID", email.MessageId);
+                var uids = await inbox.SearchAsync(query);
+
+                MimeKit.MimeMessage? message = null;
+                if (uids.Count > 0)
+                {
+                    message = await inbox.GetMessageAsync(uids[0]);
+                }
+                else
+                {
+                    // Fallback scan: Search last 30 inbox messages in case IMAP indexing search is not returning headers immediately
+                    int totalMessages = inbox.Count;
+                    int startIdx = Math.Max(0, totalMessages - 30);
+                    for (int i = totalMessages - 1; i >= startIdx; i--)
+                    {
+                        var summary = await inbox.GetMessageAsync(i);
+                        if (summary.MessageId == email.MessageId)
+                        {
+                            message = summary;
+                            break;
+                        }
+                    }
+                }
+
+                if (message != null)
+                {
+                    string uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "attachments");
+                    if (!Directory.Exists(uploadsDir))
+                    {
+                        Directory.CreateDirectory(uploadsDir);
+                    }
+
+                    foreach (var attachment in message.Attachments)
+                    {
+                        if (attachment is MimeKit.MimePart part)
+                        {
+                            string partFilename = part.FileName ?? "";
+                            if (string.Equals(partFilename, filename, StringComparison.OrdinalIgnoreCase))
+                            {
+                                string safeFilename = $"{Guid.NewGuid().ToString()}_{partFilename}";
+                                string savedPath = Path.Combine(uploadsDir, safeFilename);
+
+                                using (var stream = System.IO.File.Create(savedPath))
+                                {
+                                    part.Content.DecodeTo(stream);
+                                }
+
+                                string relativePath = Path.Combine("uploads", "attachments", safeFilename);
+
+                                // Update DB records
+                                var attachments = new List<EmailAttachmentDto>();
+                                if (!string.IsNullOrEmpty(email.AttachmentsJson))
+                                {
+                                    attachments = System.Text.Json.JsonSerializer.Deserialize<List<EmailAttachmentDto>>(email.AttachmentsJson) ?? new();
+                                }
+
+                                var existing = attachments.FirstOrDefault(a => string.Equals(a.filename, filename, StringComparison.OrdinalIgnoreCase));
+                                if (existing != null)
+                                {
+                                    existing.savedPath = relativePath;
+                                }
+                                else
+                                {
+                                    attachments.Add(new EmailAttachmentDto
+                                    {
+                                        filename = partFilename,
+                                        contentType = part.ContentType.MimeType,
+                                        savedPath = relativePath
+                                    });
+                                }
+
+                                email.AttachmentsJson = System.Text.Json.JsonSerializer.Serialize(attachments);
+                                _db.Emails.Update(email);
+                                await _db.SaveChangesAsync();
+
+                                return relativePath;
+                            }
+                        }
+                    }
+                }
+
+                await client.DisconnectAsync(true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Attachment recovery failed: {ex.Message}");
+            }
+
+            return null;
+        }
     }
 
     public class MarkAsReadDto
@@ -252,5 +555,11 @@ Naren Textile Engineers India Pvt. Ltd.";
         public int Quantity { get; set; }
         public decimal Rate { get; set; }
         public string Uom { get; set; } = string.Empty;
+    }
+    public class EmailAttachmentDto
+    {
+        public string filename { get; set; } = string.Empty;
+        public string contentType { get; set; } = string.Empty;
+        public string savedPath { get; set; } = string.Empty;
     }
 }

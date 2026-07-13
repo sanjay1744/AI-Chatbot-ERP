@@ -134,6 +134,28 @@
             <div class="header-field">
               <strong>Subject:</strong> <span>{{ selectedMail.subject }}</span>
             </div>
+
+            <!-- Email Detail Attachments -->
+            <div class="email-detail-attachments" *ngIf="selectedMail.attachments && selectedMail.attachments.length > 0">
+              <span class="attachments-title"><strong>Attachments (Click to view):</strong></span>
+              <div class="attachments-grid">
+                <div *ngFor="let att of selectedMail.attachments" 
+                     class="attachment-chip clickable"
+                     [class.pdf-chip]="att.filename?.toLowerCase().endsWith('.pdf')"
+                     [class.excel-chip]="!att.filename?.toLowerCase().endsWith('.pdf')"
+                     (click)="openAttachment(att)"
+                     [title]="att.filename?.toLowerCase().endsWith('.pdf') ? 'Click to open PDF in new tab' : 'Click to view spreadsheet'">
+                  <div class="attachment-chip-icon-wrapper">
+                    <span class="material-icons-outlined" style="font-size: 16px;">
+                      {{ att.filename?.toLowerCase().endsWith('.pdf') ? 'picture_as_pdf' : 'table_view' }}
+                    </span>
+                  </div>
+                  <div class="attachment-chip-info">
+                    <span class="attachment-chip-name">{{ att.filename }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           
           <div class="email-body-content">
@@ -151,6 +173,93 @@
       </div>
     </div>
   }
+
+  <!-- Excel Preview Modal Overlay -->
+  <div class="excel-preview-modal-overlay" *ngIf="isPreviewOpen">
+    <div class="excel-preview-modal-card">
+      <div class="excel-preview-modal-header">
+        <div class="excel-preview-title-block">
+          <span class="material-icons-outlined" style="color: #10b981; margin-right: 8px;">table_view</span>
+          <h3>Excel Viewer — {{ previewFilename }}</h3>
+        </div>
+        <div class="excel-preview-header-actions">
+          <button class="excel-preview-close-x" (click)="isPreviewOpen = false">✕</button>
+        </div>
+      </div>
+      
+      <div class="excel-preview-modal-body">
+        <div class="excel-preview-loading" *ngIf="isPreviewLoading">
+          <div class="spinner"></div>
+          <p>Loading sheet preview...</p>
+        </div>
+        
+        <div class="excel-preview-empty" *ngIf="!isPreviewLoading && previewSheets.length === 0">
+          <p>No sheet content found or failed to load preview.</p>
+        </div>
+        
+        <div class="excel-preview-content-wrapper" *ngIf="!isPreviewLoading && previewSheets.length > 0">
+          <!-- Sheet Selector Tabs -->
+          <div class="excel-preview-sheet-tabs" *ngIf="previewSheets.length > 1">
+            <button *ngFor="let sheet of previewSheets; let sIdx = index"
+                    class="sheet-tab-btn" 
+                    [class.active]="activePreviewSheetIdx === sIdx"
+                    (click)="activePreviewSheetIdx = sIdx">
+              {{ sheet.name }}
+            </button>
+          </div>
+          
+          <!-- Cell Grid Table -->
+          <div class="excel-preview-table-container">
+            <table class="excel-preview-table">
+              <thead>
+                <tr>
+                  <th class="row-number-col"></th>
+                  <th *ngFor="let col of previewSheets[activePreviewSheetIdx]?.rows[0]; let cIdx = index">
+                    {{ getExcelColumnLabel(cIdx) }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of previewSheets[activePreviewSheetIdx]?.rows; let rIdx = index">
+                  <td class="row-number-cell">{{ rIdx + 1 }}</td>
+                  <td *ngFor="let cell of row" [title]="cell || ''">
+                    {{ cell }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <div class="excel-preview-modal-footer">
+        <button class="btn btn-secondary btn-excel-preview-close" (click)="isPreviewOpen = false">Close Viewer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Preview Modal Overlay -->
+  <div class="excel-preview-modal-overlay" *ngIf="isPdfPreviewOpen && pdfUrl">
+    <div class="excel-preview-modal-card">
+      <div class="excel-preview-modal-header" style="background-color: #ef4444; border-bottom: 1px solid rgba(255, 255, 255, 0.15);">
+        <div class="excel-preview-title-block">
+          <span class="material-icons-outlined" style="color: #ffffff; margin-right: 8px;">picture_as_pdf</span>
+          <h3>PDF Viewer — {{ pdfFilename }}</h3>
+        </div>
+        <div class="excel-preview-header-actions">
+          <button class="excel-preview-close-x" (click)="isPdfPreviewOpen = false">✕</button>
+        </div>
+      </div>
+      
+      <div class="excel-preview-modal-body" style="padding: 0; background-color: #525659; overflow: hidden; height: 100%;">
+        <iframe [src]="pdfUrl" width="100%" height="100%" style="border: none; display: block;"></iframe>
+      </div>
+      
+      <div class="excel-preview-modal-footer">
+        <button class="btn btn-secondary btn-excel-preview-close" (click)="isPdfPreviewOpen = false">Close Viewer</button>
+      </div>
+    </div>
+  </div>
   
   <!-- AI Process Loading Screen overlay -->
   @if (isExtracting) {

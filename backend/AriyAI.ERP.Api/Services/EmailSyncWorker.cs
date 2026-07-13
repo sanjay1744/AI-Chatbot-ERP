@@ -173,11 +173,54 @@ namespace AriyAI.ERP.Api.Services
         private string GetAttachmentsJson(MimeMessage message)
         {
             var list = new List<object>();
+            string uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "attachments");
+            try
+            {
+                if (!Directory.Exists(uploadsDir))
+                {
+                    Directory.CreateDirectory(uploadsDir);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create uploads directory {Path}", uploadsDir);
+            }
+
             foreach (var attachment in message.Attachments)
             {
                 if (attachment is MimePart part)
                 {
-                    list.Add(new { filename = part.FileName, contentType = part.ContentType.MimeType });
+                    string filename = part.FileName ?? $"attachment-{Guid.NewGuid().ToString().Substring(0, 6)}";
+                    string ext = Path.GetExtension(filename).ToLowerInvariant();
+
+                    if (ext == ".xlsx" || ext == ".xls" || ext == ".pdf")
+                    {
+                        try
+                        {
+                            string safeFilename = $"{Guid.NewGuid().ToString()}_{filename}";
+                            string savedPath = Path.Combine(uploadsDir, safeFilename);
+
+                            using (var stream = File.Create(savedPath))
+                            {
+                                part.Content.DecodeTo(stream);
+                            }
+
+                            list.Add(new { 
+                                filename = filename, 
+                                contentType = part.ContentType.MimeType,
+                                savedPath = Path.Combine("uploads", "attachments", safeFilename)
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to save attachment {Filename}", filename);
+                            list.Add(new { filename = filename, contentType = part.ContentType.MimeType });
+                        }
+                    }
+                    else
+                    {
+                        list.Add(new { filename = filename, contentType = part.ContentType.MimeType });
+                    }
                 }
             }
             return System.Text.Json.JsonSerializer.Serialize(list);
