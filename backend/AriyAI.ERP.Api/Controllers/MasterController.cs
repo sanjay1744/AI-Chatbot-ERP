@@ -22,6 +22,20 @@ namespace AriyAI.ERP.Api.Controllers
             return await _context.Customers.OrderBy(c => c.Name).ToListAsync();
         }
 
+        [HttpPost("customers")]
+        public async Task<ActionResult<Customer>> CreateCustomer([FromBody] Customer customer)
+        {
+            if (customer == null || string.IsNullOrWhiteSpace(customer.Name))
+            {
+                return BadRequest("Customer name is required.");
+            }
+
+            _context.Customers.Add(customer);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetCustomers), new { id = customer.Id }, customer);
+        }
+
         [HttpGet("agents")]
         public async Task<ActionResult<IEnumerable<Agent>>> GetAgents()
         {

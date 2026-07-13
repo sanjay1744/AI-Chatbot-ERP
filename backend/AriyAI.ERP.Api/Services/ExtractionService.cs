@@ -35,6 +35,45 @@ namespace AriyAI.ERP.Api.Services
 
             var lines = ocrText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
+            // Detect table header to bypass document metadata/addresses preceding the product list
+            try
+            {
+                var slRegex = new Regex(@"\b(?:sl\s*\.?\s*no|sl\b)", RegexOptions.IgnoreCase);
+                var brandRegex = new Regex(@"\b(?:brand|make|manufacturer)\b", RegexOptions.IgnoreCase);
+                var partRegex = new Regex(@"\b(?:part\s*code|part\s*num(?:ber)?|part\s*no|model)\b", RegexOptions.IgnoreCase);
+                var descRegex = new Regex(@"\b(?:description|product|name|details|item)\b", RegexOptions.IgnoreCase);
+                var qtyRegex = new Regex(@"\b(?:qty|quantity|q)\b", RegexOptions.IgnoreCase);
+                var unitRegex = new Regex(@"\b(?:unit|uom|nos|pcs)\b", RegexOptions.IgnoreCase);
+
+                int headerIndex = -1;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string l = lines[i];
+                    int matchedHeaders = 0;
+                    if (slRegex.IsMatch(l)) matchedHeaders++;
+                    if (brandRegex.IsMatch(l)) matchedHeaders++;
+                    if (partRegex.IsMatch(l)) matchedHeaders++;
+                    if (descRegex.IsMatch(l)) matchedHeaders++;
+                    if (qtyRegex.IsMatch(l)) matchedHeaders++;
+                    if (unitRegex.IsMatch(l)) matchedHeaders++;
+
+                    if (matchedHeaders >= 3)
+                    {
+                        headerIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerIndex != -1)
+                {
+                    lines = lines.Skip(headerIndex + 1).ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Header boundary check error: {ex.Message}");
+            }
+
             try
             {
                 // Detect if the text contains a structured table
@@ -65,7 +104,7 @@ namespace AriyAI.ERP.Api.Services
                     }
                 }
 
-                if (isTable)
+                if (false) // Bypassed table parser to let layout-aware lines flow directly into robust line-by-line fallback parser
                 {
                     string headerLine = lines[headerLineIndex];
                     var headerParts = Regex.Split(headerLine, @"\s{2,}|\t")
@@ -294,6 +333,8 @@ namespace AriyAI.ERP.Api.Services
 
                 // Clean remainder representation
                 string productName = remainder;
+                // Strip HSN code (8-digit numbers)
+                productName = Regex.Replace(productName, @"\b\d{8}\b", "").Trim();
                 productName = Regex.Replace(productName, @"^[\s\-\:\,\.\/]+|[\s\-\:\,\.\/]+$", "").Trim();
 
                 if (productCode == null)

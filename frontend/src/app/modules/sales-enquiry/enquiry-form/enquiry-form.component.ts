@@ -45,6 +45,145 @@ export class EnquiryFormComponent implements OnInit {
     enquiryProducts: []
   };
 
+  // Custom Dropdowns State
+  isCustomerDropdownOpen = false;
+  isSourceDropdownOpen = false;
+  isLeadTypeDropdownOpen = false;
+  customerSearchQuery = '';
+
+  // New Customer Modal State
+  showNewCustomerModal = false;
+  newCustomerForm = {
+    name: '',
+    address: '',
+    city: 'Coimbatore',
+    state: 'Tamil Nadu',
+    country: 'India'
+  };
+
+  sourceOptions = ['Agent', 'Direct', 'Email', 'Phone', 'WebSite'];
+  leadTypeOptions = ['Select', 'Hot', 'Warm', 'Cold'];
+
+  openNewCustomerModal() {
+    this.showNewCustomerModal = true;
+    this.newCustomerForm = {
+      name: '',
+      address: '',
+      city: 'Coimbatore',
+      state: 'Tamil Nadu',
+      country: 'India'
+    };
+  }
+
+  closeNewCustomerModal() {
+    this.showNewCustomerModal = false;
+  }
+
+  saveNewCustomer() {
+    if (!this.newCustomerForm.name.trim()) return;
+
+    const newCust: Customer = {
+      id: 0,
+      name: this.newCustomerForm.name.trim(),
+      address: this.newCustomerForm.address.trim(),
+      city: this.newCustomerForm.city.trim(),
+      state: this.newCustomerForm.state.trim(),
+      country: this.newCustomerForm.country.trim()
+    };
+
+    this.api.createCustomer(newCust).subscribe({
+      next: (createdCust) => {
+        this.customers.push(createdCust);
+        this.customers.sort((a, b) => a.name.localeCompare(b.name));
+        this.enquiry.customerId = createdCust.id;
+        this.onCustomerChange();
+        this.closeNewCustomerModal();
+      },
+      error: (err) => {
+        console.error("Error creating customer:", err);
+        alert("Failed to save new customer. Please try again.");
+      }
+    });
+  }
+
+  get selectedCustomerName(): string {
+    const cust = this.customers.find(c => c.id === this.enquiry.customerId);
+    return cust ? cust.name : '';
+  }
+
+  get filteredCustomers(): Customer[] {
+    if (!this.customerSearchQuery.trim()) {
+      return this.customers;
+    }
+    const q = this.customerSearchQuery.toLowerCase();
+    return this.customers.filter(c => c.name.toLowerCase().includes(q));
+  }
+
+  toggleCustomerDropdown() {
+    this.isCustomerDropdownOpen = !this.isCustomerDropdownOpen;
+    this.isSourceDropdownOpen = false;
+    this.isLeadTypeDropdownOpen = false;
+    if (this.isCustomerDropdownOpen) {
+      this.customerSearchQuery = '';
+    }
+  }
+
+  selectCustomer(cust: Customer) {
+    this.enquiry.customerId = cust.id;
+    this.isCustomerDropdownOpen = false;
+    this.onCustomerChange();
+  }
+
+  clearCustomer(event: Event) {
+    event.stopPropagation();
+    this.enquiry.customerId = 0;
+    this.onCustomerChange();
+  }
+
+  toggleSourceDropdown() {
+    this.isSourceDropdownOpen = !this.isSourceDropdownOpen;
+    this.isCustomerDropdownOpen = false;
+    this.isLeadTypeDropdownOpen = false;
+  }
+
+  selectSource(src: string) {
+    this.enquiry.source = src;
+    this.isSourceDropdownOpen = false;
+  }
+
+  clearSource(event: Event) {
+    event.stopPropagation();
+    this.enquiry.source = '';
+    this.isSourceDropdownOpen = false;
+  }
+
+  toggleLeadTypeDropdown() {
+    this.isLeadTypeDropdownOpen = !this.isLeadTypeDropdownOpen;
+    this.isCustomerDropdownOpen = false;
+    this.isSourceDropdownOpen = false;
+  }
+
+  selectLeadType(type: string) {
+    this.enquiry.leadType = type === 'Select' ? '' : type;
+    this.isLeadTypeDropdownOpen = false;
+  }
+
+  clearLeadType(event: Event) {
+    event.stopPropagation();
+    this.enquiry.leadType = '';
+    this.isLeadTypeDropdownOpen = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.custom-dropdown')) {
+      this.isCustomerDropdownOpen = false;
+      this.isSourceDropdownOpen = false;
+      this.isLeadTypeDropdownOpen = false;
+    }
+  }
+
   // New Item State (for product modal)
   showProductModal = false;
   searchQuery = '';

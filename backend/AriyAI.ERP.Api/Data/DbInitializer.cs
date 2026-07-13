@@ -58,6 +58,121 @@ namespace AriyAI.ERP.Api.Data
                 }
             }
 
+            // Seed Customers if empty
+            if (!context.Customers.Any())
+            {
+                var customers = new List<Customer>
+                {
+                    new Customer { Name = "A S S MILLS PRIVATE LIMITED", Address = "9/10, Periar Nagar, Nehru Nagar East", City = "Coimbatore", State = "Tamil Nadu", Country = "India" },
+                    new Customer { Name = "A.P.SPINNERS", Address = "12, Trichy Road", City = "Coimbatore", State = "Tamil Nadu", Country = "India" },
+                    new Customer { Name = "Ace Tex", Address = "45, Kamarajar Street", City = "Tiruppur", State = "Tamil Nadu", Country = "India" },
+                    new Customer { Name = "ACETECH HEAVY FAB PRIVATE LIMITED,", Address = "SF No. 340, Eachanari", City = "Coimbatore", State = "Tamil Nadu", Country = "India" },
+                    new Customer { Name = "ADISANKARA SPINNING MILLS PVT LTD,", Address = "SF No. 120, Dharapuram Road", City = "Dharapuram", State = "Tamil Nadu", Country = "India" }
+                };
+
+                // Extract customers from sales.xlsx
+                string salesExcelPath = @"d:\AriyAI\chatbot_\AI_Data\sales.xlsx";
+                if (File.Exists(salesExcelPath))
+                {
+                    try
+                    {
+                        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                        using (var stream = File.Open(salesExcelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            using (var reader = ExcelDataReader.ExcelReaderFactory.CreateReader(stream))
+                            {
+                                var result = reader.AsDataSet(new ExcelDataReader.ExcelDataSetConfiguration()
+                                {
+                                    ConfigureDataTable = (_) => new ExcelDataReader.ExcelDataTableConfiguration()
+                                    {
+                                        UseHeaderRow = true
+                                    }
+                                });
+
+                                if (result.Tables.Count > 0)
+                                {
+                                    var table = result.Tables[0];
+                                    int custNameCol = -1;
+                                    for (int i = 0; i < table.Columns.Count; i++)
+                                    {
+                                        string colName = table.Columns[i].ColumnName.ToLowerInvariant().Replace(" ", "").Replace("_", "");
+                                        if (colName.Contains("customername"))
+                                        {
+                                            custNameCol = i;
+                                            break;
+                                        }
+                                    }
+
+                                    if (custNameCol != -1)
+                                    {
+                                        var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                                        foreach (var c in customers)
+                                        {
+                                            uniqueNames.Add(c.Name);
+                                        }
+
+                                        foreach (DataRow row in table.Rows)
+                                        {
+                                            string name = row[custNameCol]?.ToString()?.Trim() ?? "";
+                                            if (!string.IsNullOrEmpty(name))
+                                            {
+                                                uniqueNames.Add(name);
+                                            }
+                                        }
+
+                                        var cities = new[] { "Coimbatore", "Tiruppur", "Erode", "Salem", "Madurai", "Karur", "Namakkal", "Pollachi" };
+                                        var states = new[] { "Tamil Nadu" };
+                                        var random = new Random();
+                                        int index = 1;
+
+                                        foreach (var name in uniqueNames)
+                                        {
+                                            if (customers.Any(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                                                continue;
+
+                                            var city = cities[random.Next(cities.Length)];
+                                            var state = states[random.Next(states.Length)];
+                                            var address = $"{index * 12}, SF No. {index + 100}, Main Road, Industrial Estate";
+
+                                            customers.Add(new Customer
+                                            {
+                                                Name = name,
+                                                Address = address,
+                                                City = city,
+                                                State = state,
+                                                Country = "India"
+                                            });
+                                            index++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error seeding customers from sales.xlsx: {ex.Message}");
+                    }
+                }
+
+                context.Customers.AddRange(customers);
+                context.SaveChanges();
+            }
+
+            // Seed Agents if empty
+            if (!context.Agents.Any())
+            {
+                context.Agents.AddRange(new List<Agent>
+                {
+                    new Agent { Name = "U. THALAIMALAI", Email = "thalaimalai@ariyaitech.com", Phone = "9842216021" },
+                    new Agent { Name = "ABHISHEK JAIN", Email = "abhishek@ariyaitech.com", Phone = "9842216022" },
+                    new Agent { Name = "AJITH", Email = "ajith@ariyaitech.com", Phone = "9842216023" },
+                    new Agent { Name = "K. NAGANATHAN", Email = "naganathan@ariyaitech.com", Phone = "9842216024" },
+                    new Agent { Name = "K. SARAVANAN", Email = "saravanan@ariyaitech.com", Phone = "9842216025" }
+                });
+                context.SaveChanges();
+            }
+
             // Seed mock emails for local UI process demo if empty
             if (!context.Emails.Any())
             {

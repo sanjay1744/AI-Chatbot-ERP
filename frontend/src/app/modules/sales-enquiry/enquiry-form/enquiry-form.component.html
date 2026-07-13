@@ -32,35 +32,67 @@
         <label>Enquiry Date*</label>
         <input type="date" [(ngModel)]="enquiry.enquiryDate" />
       </div>
-      <div class="field-outlined">
+      <!-- Source Dropdown -->
+      <div class="field-outlined custom-dropdown" [class.open]="isSourceDropdownOpen">
         <label>Source</label>
-        <select [(ngModel)]="enquiry.source">
-          <option value="Agent">Agent</option>
-          <option value="Direct">Direct</option>
-          <option value="Website">Website</option>
-          <option value="Email">Email</option>
-        </select>
+        <div class="dropdown-trigger" (click)="toggleSourceDropdown()">
+          <span class="trigger-value" [class.placeholder]="!enquiry.source">{{ enquiry.source || 'Select' }}</span>
+          <div class="trigger-actions">
+            <span class="clear-btn" *ngIf="enquiry.source" (click)="clearSource($event)">✕</span>
+            <span class="arrow-icon"></span>
+          </div>
+        </div>
+        <div class="dropdown-menu" *ngIf="isSourceDropdownOpen">
+          <div class="dropdown-option" *ngFor="let opt of sourceOptions" [class.selected]="enquiry.source === opt" (click)="selectSource(opt)">
+            {{ opt }}
+          </div>
+        </div>
       </div>
-      <div class="field-outlined">
+
+      <!-- Lead Type Dropdown -->
+      <div class="field-outlined custom-dropdown" [class.open]="isLeadTypeDropdownOpen">
         <label>Lead Type*</label>
-        <select [(ngModel)]="enquiry.leadType">
-          <option value="Cold">Cold</option>
-          <option value="Warm">Warm</option>
-          <option value="Hot">Hot</option>
-        </select>
+        <div class="dropdown-trigger" (click)="toggleLeadTypeDropdown()">
+          <span class="trigger-value" [class.placeholder]="!enquiry.leadType">{{ enquiry.leadType || 'Select' }}</span>
+          <div class="trigger-actions">
+            <span class="clear-btn" *ngIf="enquiry.leadType" (click)="clearLeadType($event)">✕</span>
+            <span class="arrow-icon"></span>
+          </div>
+        </div>
+        <div class="dropdown-menu" *ngIf="isLeadTypeDropdownOpen">
+          <div class="dropdown-option" *ngFor="let opt of leadTypeOptions" [class.selected]="(enquiry.leadType || 'Select') === opt" (click)="selectLeadType(opt)">
+            {{ opt }}
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Row 2: Customer, Address -->
-    <div class="form-row cols-2">
-      <div class="field-outlined">
+    <!-- Row 2: Customer, New Button, Address -->
+    <div class="customer-row-container">
+      <!-- Customer Dropdown -->
+      <div class="field-outlined custom-dropdown customer-select-field" [class.open]="isCustomerDropdownOpen">
         <label>Customer*</label>
-        <select [(ngModel)]="enquiry.customerId" (change)="onCustomerChange()">
-          <option [value]="0"></option>
-          <option *ngFor="let cust of customers" [value]="cust.id">{{ cust.name }}</option>
-        </select>
+        <div class="dropdown-trigger" (click)="toggleCustomerDropdown()">
+          <span class="trigger-value" [class.placeholder]="!enquiry.customerId">{{ selectedCustomerName || '' }}</span>
+          <div class="trigger-actions">
+            <span class="clear-btn" *ngIf="enquiry.customerId" (click)="clearCustomer($event)">✕</span>
+            <span class="arrow-icon"></span>
+          </div>
+        </div>
+        <div class="dropdown-menu customer-dropdown-menu" *ngIf="isCustomerDropdownOpen">
+          <div class="dropdown-options-container">
+            <div class="dropdown-option" *ngFor="let cust of customers" [class.selected]="enquiry.customerId === cust.id" (click)="selectCustomer(cust)">
+              {{ cust.name }}
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="field-outlined">
+
+      <!-- New Button -->
+      <button type="button" class="btn-new-customer" (click)="openNewCustomerModal()">New</button>
+
+      <!-- Address Input -->
+      <div class="field-outlined address-field">
         <label>Address</label>
         <input type="text" [(ngModel)]="enquiry.address" />
       </div>
@@ -488,6 +520,45 @@
       <button class="btn-exit" (click)="showContactModal = false">Cancel</button>
       <button class="btn btn-primary" (click)="saveContact()">
         {{ isContactEditMode ? 'Save' : 'Add' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Modal -->
+<div class="modal-overlay" *ngIf="showNewCustomerModal">
+  <div class="modal-box customer-modal-box">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0b4c79 0%, #1e3a8a 100%);">
+      <h3 style="color: #ffffff;">ADD NEW CUSTOMER</h3>
+      <button class="modal-close" (click)="closeNewCustomerModal()">
+        <span class="material-icons-outlined" style="color: #ffffff; font-size: 20px;">close</span>
+      </button>
+    </div>
+    
+    <div class="modal-body" style="gap: 16px;">
+      <div class="form-field">
+        <input type="text" [(ngModel)]="newCustomerForm.name" placeholder="Customer Name*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+      </div>
+      <div class="form-field">
+        <input type="text" [(ngModel)]="newCustomerForm.address" placeholder="Address*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+      </div>
+      <div class="contact-form-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 4px;">
+        <div class="form-field">
+          <input type="text" [(ngModel)]="newCustomerForm.city" placeholder="City*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="newCustomerForm.state" placeholder="State*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="newCustomerForm.country" placeholder="Country*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-exit" (click)="closeNewCustomerModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="!newCustomerForm.name" (click)="saveNewCustomer()">
+        Save
       </button>
     </div>
   </div>

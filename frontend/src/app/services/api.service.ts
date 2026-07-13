@@ -15,6 +15,10 @@ export class ApiService {
     return this.http.get<Customer[]>(`${this.baseUrl}/master/customers`);
   }
 
+  createCustomer(customer: Customer): Observable<Customer> {
+    return this.http.post<Customer>(`${this.baseUrl}/master/customers`, customer);
+  }
+
   getAgents(): Observable<Agent[]> {
     return this.http.get<Agent[]>(`${this.baseUrl}/master/agents`);
   }

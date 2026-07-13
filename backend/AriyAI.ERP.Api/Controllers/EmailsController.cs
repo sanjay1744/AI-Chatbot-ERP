@@ -198,6 +198,19 @@ namespace AriyAI.ERP.Api.Controllers
 
             string nameLower = (item.ProductDescription ?? "").ToLower();
 
+            // 1.5. Unconditional Noise Filtering (always discard addresses, phones, emails, company headings)
+            var strictNoiseKeywords = new[]
+            {
+                "phone", "tele fax", "telefax", "email", "website", "www.", "gst", "cin", "sales enquiry",
+                "enquiry no", "valid upto", "date :", "kind attn", "subject:", "reference :", "coimbatore",
+                "prepared by", "signatory", "textile mills india", "naren textile", "road", "nagar", "pincode"
+            };
+
+            if (strictNoiseKeywords.Any(k => nameLower.Contains(k)))
+            {
+                return false;
+            }
+
             // 2. Filter out conversational greetings / sign-offs / signature noise
             var noisePhrases = new[]
             {
