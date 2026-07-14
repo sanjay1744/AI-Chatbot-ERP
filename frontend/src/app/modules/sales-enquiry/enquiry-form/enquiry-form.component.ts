@@ -445,7 +445,7 @@ export class EnquiryFormComponent implements OnInit {
       this.api.savePotentialItem(potItem).subscribe({
         next: (res) => {
           if (this.mappingItemIndex !== null && this.mappingItemIndex !== undefined) {
-            this.enquiry.enquiryProducts[this.mappingItemIndex].mapping = 'Mapped';
+            this.enquiry.enquiryProducts[this.mappingItemIndex].mapping = 'Unmapped';
           }
           this.closeMapItemModal();
         },
