@@ -190,6 +190,14 @@ export class EnquiryFormComponent implements OnInit {
   searchResults: Product[] = [];
   selectedProductsForForm: any[] = [];
 
+  // Map Item Modal State
+  showMapItemModal = false;
+  mappingItem: EnquiryProduct | null = null;
+  mappingItemIndex: number | null = null;
+  mapSearchQuery = '';
+  mapSearchResults: Product[] = [];
+  selectedMapProduct: Product | null = null;
+
   // Contact Persons Tab State
   contacts: any[] = [
     { name: '1111', designation: '1111', phoneHome: '', phoneOffice: '', mobile: '1111111111', email: 'asa@13.com', active: true, isPrimary: false },
@@ -364,6 +372,89 @@ export class EnquiryFormComponent implements OnInit {
 
   removeProductItem(index: number) {
     this.enquiry.enquiryProducts.splice(index, 1);
+  }
+
+  openMapItemModal(item: EnquiryProduct, index: number) {
+    this.showMapItemModal = true;
+    this.mappingItem = { ...item };
+    this.mappingItemIndex = index;
+    this.mapSearchQuery = '';
+    this.mapSearchResults = [];
+    this.selectedMapProduct = null;
+  }
+
+  closeMapItemModal() {
+    this.showMapItemModal = false;
+    this.mappingItem = null;
+    this.mappingItemIndex = null;
+    this.mapSearchQuery = '';
+    this.mapSearchResults = [];
+    this.selectedMapProduct = null;
+  }
+
+  onMapSearchQueryChange() {
+    const q = this.mapSearchQuery.toLowerCase().trim();
+    if (q.length < 3) {
+      this.mapSearchResults = [];
+      return;
+    }
+    this.mapSearchResults = this.products.filter(p => 
+      (p.description && p.description.toLowerCase().includes(q)) ||
+      (p.partNumber && p.partNumber.toLowerCase().includes(q)) ||
+      (p.group && p.group.toLowerCase().includes(q)) ||
+      (p.make && p.make.toLowerCase().includes(q))
+    );
+  }
+
+  clearMapSearch() {
+    this.mapSearchQuery = '';
+    this.mapSearchResults = [];
+    this.selectedMapProduct = null;
+  }
+
+  selectMapProduct(product: Product) {
+    this.selectedMapProduct = product;
+    this.mapSearchQuery = product.description;
+    this.mapSearchResults = [];
+  }
+
+  confirmItemMapping() {
+    if (this.mappingItemIndex === null || this.mappingItemIndex === undefined) return;
+
+    if (this.selectedMapProduct) {
+      // Situation 1: Mapping to an existing database item
+      const item = this.enquiry.enquiryProducts[this.mappingItemIndex];
+      item.productId = this.selectedMapProduct.id;
+      item.group = this.selectedMapProduct.group;
+      item.productDescription = this.selectedMapProduct.description;
+      item.partNumber = this.selectedMapProduct.partNumber;
+      item.make = this.selectedMapProduct.make;
+      item.model = this.selectedMapProduct.model;
+      item.rate = this.selectedMapProduct.rate;
+      item.mapping = 'Mapped';
+      
+      this.closeMapItemModal();
+    } else {
+      // Situation 2: Saving as a Potential Item
+      if (!this.mappingItem) return;
+      const potItem = {
+        name: this.mappingItem.productDescription,
+        partNumber: this.mappingItem.partNumber || '',
+        rate: this.mappingItem.rate || 0
+      };
+      this.api.savePotentialItem(potItem).subscribe({
+        next: (res) => {
+          if (this.mappingItemIndex !== null && this.mappingItemIndex !== undefined) {
+            this.enquiry.enquiryProducts[this.mappingItemIndex].mapping = 'Mapped';
+          }
+          this.closeMapItemModal();
+        },
+        error: (err) => {
+          console.error("Error saving potential item:", err);
+          alert("Failed to save potential item. Please try again.");
+        }
+      });
+    }
   }
 
   getDistinctMakes(group?: string): string[] {

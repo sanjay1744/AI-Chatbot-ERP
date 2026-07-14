@@ -20,6 +20,7 @@ namespace AriyAI.ERP.Api.Data
         public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         public DbSet<Email> Emails => Set<Email>();
+        public DbSet<PotentialItem> PotentialItems => Set<PotentialItem>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

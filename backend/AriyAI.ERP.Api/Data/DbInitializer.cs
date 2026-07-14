@@ -53,6 +53,12 @@ namespace AriyAI.ERP.Api.Data
                         );
                         CREATE UNIQUE INDEX IF NOT EXISTS IX_Emails_MessageId ON Emails (MessageId);
                         CREATE INDEX IF NOT EXISTS IX_Emails_IsDeleted ON Emails (IsDeleted);
+                        CREATE TABLE IF NOT EXISTS PotentialItems (
+                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Name TEXT NOT NULL,
+                            PartNumber TEXT NOT NULL,
+                            Rate REAL NOT NULL
+                        );
                     ";
                     command.ExecuteNonQuery();
                 }

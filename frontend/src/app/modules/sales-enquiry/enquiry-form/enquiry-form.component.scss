@@ -1052,3 +1052,14 @@
     }
   }
 }
+
+/* Map Item Modal Specific Styling */
+.map-item-modal-box {
+  .search-result-row {
+    transition: background-color 0.15s ease;
+    &:hover {
+      background-color: #f1f5f9 !important;
+    }
+  }
+}
+

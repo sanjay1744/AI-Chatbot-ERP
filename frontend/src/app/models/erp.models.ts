@@ -92,3 +92,10 @@ export interface QuotationProduct {
   quantity: number;
   rate: number;
 }
+
+export interface PotentialItem {
+  id?: number;
+  name: string;
+  partNumber: string;
+  rate: number;
+}

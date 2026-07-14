@@ -27,6 +27,10 @@ export class ApiService {
     return this.http.get<Product[]>(`${this.baseUrl}/master/products`);
   }
 
+  savePotentialItem(item: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/master/potential-items`, item);
+  }
+
   // Sales Enquiries
   getEnquiries(params?: { status?: string; fromDate?: string; toDate?: string; customerId?: number; query?: string }): Observable<any[]> {
     // Strip undefined/null/empty values so Angular doesn't send "undefined" as a literal string

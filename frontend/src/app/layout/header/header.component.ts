@@ -188,6 +188,7 @@ Augustine`
             attachments: (email.attachmentsJson || email.attachments_json) ? JSON.parse(email.attachmentsJson || email.attachments_json) : [],
             isRead: email.isRead
           }));
+          this.cdr.detectChanges();
         }
       },
       error: (err) => {
@@ -312,13 +313,14 @@ Augustine`
     };
     this.isEmailDetailsOpen = true;
     this.isNotificationsOpen = false;
+    this.cdr.detectChanges();
 
     // Mark the email as read when opened
     if (mail.isRead === false) {
       mail.isRead = true;
       this.http.put(`http://localhost:5022/api/emails/${mail.id}/read`, { isRead: true }).subscribe({
         next: () => {
-          // Re-fetch count or update state locally if needed
+          this.cdr.detectChanges();
         },
         error: (err) => console.warn('Could not mark email as read in backend:', err)
       });
@@ -329,12 +331,14 @@ Augustine`
     if (!this.selectedMail) return;
     
     this.isExtracting = true;
+    this.cdr.detectChanges();
     this.http.post<any[]>(`http://localhost:5022/api/emails/${this.selectedMail.id}/extract`, {}).subscribe({
       next: (extractedItems) => {
         this.isExtracting = false;
         localStorage.setItem('extractedEmailProducts', JSON.stringify(extractedItems));
         this.isNotificationsOpen = false;
         this.isEmailDetailsOpen = false;
+        this.cdr.detectChanges();
         
         this.router.navigate(['/lead/sales-enquiry/new']).then(() => {
           setTimeout(() => {
@@ -356,6 +360,7 @@ Augustine`
         localStorage.setItem('extractedEmailProducts', JSON.stringify(extractedItems));
         this.isNotificationsOpen = false;
         this.isEmailDetailsOpen = false;
+        this.cdr.detectChanges();
         this.router.navigate(['/lead/sales-enquiry/new']).then(() => {
           setTimeout(() => {
             window.dispatchEvent(new Event('extractedEmailProductsLoaded'));
@@ -373,6 +378,7 @@ Augustine`
       this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(rawUrl);
       this.pdfFilename = att.filename;
       this.isPdfPreviewOpen = true;
+      this.cdr.detectChanges();
     } else {
       this.handleOpenPreview(att.filename);
     }
@@ -385,16 +391,19 @@ Augustine`
     this.isPreviewOpen = true;
     this.previewSheets = [];
     this.activePreviewSheetIdx = 0;
+    this.cdr.detectChanges();
 
     this.http.get<any>(`http://localhost:5022/api/emails/${this.selectedMail.id}/attachments/${encodeURIComponent(filename)}/preview`).subscribe({
       next: (data) => {
         this.isPreviewLoading = false;
         this.previewSheets = data.sheets || [];
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isPreviewLoading = false;
         alert('Failed to parse Excel sheet preview.');
         this.isPreviewOpen = false;
+        this.cdr.detectChanges();
       }
     });
   }
