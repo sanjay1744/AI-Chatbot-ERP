@@ -42,13 +42,18 @@ export class EnquiryListComponent implements OnInit {
       status: this.enquiryType,
       fromDate: this.fromDate || undefined,
       toDate: this.toDate || undefined,
-      customerId: this.selectedCustomerId || undefined,
+      customerId: (this.selectedCustomerId && this.selectedCustomerId.toString() !== 'null') ? Number(this.selectedCustomerId) : undefined,
       query: this.gridFilter || undefined
     };
 
-    this.api.getEnquiries(params).subscribe(data => {
-      this.enquiries = data;
-      this.recordsCount = data.length;
+    this.api.getEnquiries(params).subscribe({
+      next: (data) => {
+        this.enquiries = data;
+        this.recordsCount = data.length;
+      },
+      error: (err) => {
+        console.error('Error loading enquiries:', err);
+      }
     });
   }
 
@@ -58,5 +63,27 @@ export class EnquiryListComponent implements OnInit {
 
   addNew() {
     this.router.navigate(['/lead/sales-enquiry/new']);
+  }
+
+  viewEnquiry(enq: any) {
+    this.router.navigate(['/lead/sales-enquiry/edit', enq.id]);
+  }
+
+  deleteEnquiry(id: number) {
+    if (confirm('Are you sure you want to delete this sales enquiry?')) {
+      this.api.deleteEnquiry(id).subscribe({
+        next: () => {
+          this.loadEnquiries();
+        },
+        error: (err) => {
+          console.error('Error deleting enquiry:', err);
+          alert('Failed to delete sales enquiry.');
+        }
+      });
+    }
+  }
+
+  convertToQuotation(enq: any) {
+    this.router.navigate(['/lead/quotation/new'], { queryParams: { enquiryId: enq.id } });
   }
 }

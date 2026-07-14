@@ -82,6 +82,10 @@
           <th>Status</th>
           <th>Items</th>
           <th>Aging</th>
+          <th style="width: 60px; text-align: center;">Convert</th>
+          <th style="width: 50px; text-align: center;">View</th>
+          <th style="width: 50px; text-align: center;">Edit</th>
+          <th style="width: 50px; text-align: center;">Delete</th>
         </tr>
       </thead>
       <tbody>
@@ -103,14 +107,34 @@
             }">{{ enq.status }}</span>
           </td>
           <td>
-            <span class="badge badge-item">= {{ enq.itemsCount }}</span>
+            <span class="badge badge-item">{{ enq.itemsCount }}</span>
           </td>
           <td>
             <span class="text-danger">{{ enq.aging }}</span>
           </td>
+          <td style="text-align: center;">
+            <button class="action-btn text-success" (click)="convertToQuotation(enq)" title="Convert to Quotation" style="background: none; border: none; cursor: pointer; padding: 2px;">
+              <span class="material-icons-outlined" style="font-size: 18px; color: #2ecc71;">shortcut</span>
+            </button>
+          </td>
+          <td style="text-align: center;">
+            <button class="action-btn text-primary" (click)="viewEnquiry(enq)" title="View Enquiry" style="background: none; border: none; cursor: pointer; padding: 2px;">
+              <span class="material-icons-outlined" style="font-size: 18px; color: #0b4c79;">visibility</span>
+            </button>
+          </td>
+          <td style="text-align: center;">
+            <a [routerLink]="['/lead/sales-enquiry/edit', enq.id]" class="action-btn text-warning" title="Edit Enquiry" style="display: inline-flex; align-items: center; justify-content: center; padding: 2px; text-decoration: none;">
+              <span class="material-icons-outlined" style="font-size: 18px; color: #3b82f6;">edit</span>
+            </a>
+          </td>
+          <td style="text-align: center;">
+            <button class="action-btn text-danger" (click)="deleteEnquiry(enq.id)" title="Delete Enquiry" style="background: none; border: none; cursor: pointer; padding: 2px;">
+              <span class="material-icons-outlined" style="font-size: 18px; color: #e74c3c;">delete_outline</span>
+            </button>
+          </td>
         </tr>
         <tr *ngIf="enquiries.length === 0">
-          <td colspan="10" class="empty-state">No sales enquiries found.</td>
+          <td colspan="14" class="empty-state">No sales enquiries found.</td>
         </tr>
       </tbody>
     </table>

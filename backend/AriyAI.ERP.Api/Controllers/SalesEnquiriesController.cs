@@ -27,6 +27,7 @@ namespace AriyAI.ERP.Api.Controllers
             var dbQuery = _context.SalesEnquiries
                 .Include(e => e.Customer)
                 .Include(e => e.Agent)
+                .Include(e => e.EnquiryProducts)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
@@ -67,7 +68,7 @@ namespace AriyAI.ERP.Api.Controllers
                 e.EnquiryNumber,
                 EnquiryDate = e.EnquiryDate.ToString("dd/MMM/yyyy"),
                 Customer = e.Customer?.Name ?? string.Empty,
-                Agent = e.Agent?.Name ?? "—",
+                Agent = e.Agent?.Name ?? "-",
                 e.LeadType,
                 City = e.Customer?.City ?? string.Empty,
                 State = e.Customer?.State ?? string.Empty,
@@ -105,6 +106,11 @@ namespace AriyAI.ERP.Api.Controllers
             enquiry.Aging = 0;
             enquiry.Status = "Pending";
 
+            if (enquiry.AgentId == null && enquiry.AssignToId != null)
+            {
+                enquiry.AgentId = enquiry.AssignToId;
+            }
+
             _context.SalesEnquiries.Add(enquiry);
             await _context.SaveChangesAsync();
 
@@ -130,7 +136,7 @@ namespace AriyAI.ERP.Api.Controllers
 
             // Update scalar fields
             existing.CustomerId = enquiry.CustomerId;
-            existing.AgentId = enquiry.AgentId;
+            existing.AgentId = enquiry.AgentId ?? enquiry.AssignToId;
             existing.Source = enquiry.Source;
             existing.LeadType = enquiry.LeadType;
             existing.Address = enquiry.Address;

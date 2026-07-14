@@ -75,6 +75,34 @@ export class QuotationFormComponent implements OnInit {
         }
         this.quotation = data;
       });
+    } else {
+      // Check query parameter for conversion from enquiry
+      this.route.queryParams.subscribe(params => {
+        const enquiryId = params['enquiryId'];
+        if (enquiryId) {
+          this.api.getEnquiry(+enquiryId).subscribe(enq => {
+            this.quotation.customerId = enq.customerId;
+            this.quotation.address = enq.address;
+            this.quotation.agentId = enq.agentId || enq.assignToId;
+            this.quotation.customerReference = enq.enquiryNumber || '';
+            this.quotation.subject1 = enq.remarks || '';
+            
+            // Map products
+            if (enq.enquiryProducts) {
+              this.quotation.quotationProducts = enq.enquiryProducts.map(ep => ({
+                productId: ep.productId,
+                group: ep.group || '',
+                productDescription: ep.productDescription || ep.partNumber || '',
+                partNumber: ep.partNumber || '',
+                make: ep.make || '',
+                model: ep.model || '',
+                quantity: ep.quantity,
+                rate: ep.rate
+              }));
+            }
+          });
+        }
+      });
     }
   }
 

@@ -29,7 +29,17 @@ export class ApiService {
 
   // Sales Enquiries
   getEnquiries(params?: { status?: string; fromDate?: string; toDate?: string; customerId?: number; query?: string }): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/salesenquiries`, { params: params as any });
+    // Strip undefined/null/empty values so Angular doesn't send "undefined" as a literal string
+    const cleanParams: any = {};
+    if (params) {
+      Object.keys(params).forEach(key => {
+        const val = (params as any)[key];
+        if (val !== undefined && val !== null && val !== '' && val.toString() !== 'null') {
+          cleanParams[key] = val;
+        }
+      });
+    }
+    return this.http.get<any[]>(`${this.baseUrl}/salesenquiries`, { params: cleanParams });
   }
 
   getEnquiry(id: number): Observable<SalesEnquiry> {
@@ -56,7 +66,16 @@ export class ApiService {
 
   // Quotations
   getQuotations(params?: { status?: string; fromDate?: string; toDate?: string; customerId?: number; query?: string }): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/quotations`, { params: params as any });
+    const cleanParams: any = {};
+    if (params) {
+      Object.keys(params).forEach(key => {
+        const val = (params as any)[key];
+        if (val !== undefined && val !== null && val !== '' && val.toString() !== 'null') {
+          cleanParams[key] = val;
+        }
+      });
+    }
+    return this.http.get<any[]>(`${this.baseUrl}/quotations`, { params: cleanParams });
   }
 
   getQuotation(id: number): Observable<Quotation> {

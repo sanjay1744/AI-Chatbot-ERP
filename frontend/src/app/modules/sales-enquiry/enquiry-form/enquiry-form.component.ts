@@ -499,13 +499,38 @@ export class EnquiryFormComponent implements OnInit {
 
   // Form submission
   saveEnquiry() {
+    if (!this.enquiry.customerId || this.enquiry.customerId === 0) {
+      alert("Please select a Customer.");
+      return;
+    }
+    if (!this.enquiry.assignToId) {
+      alert("Please select an agent in Assign To.");
+      return;
+    }
+    if (!this.enquiry.enquiryProducts || this.enquiry.enquiryProducts.length === 0) {
+      alert("Please add at least one product item in the Product List tab.");
+      return;
+    }
+
     if (this.isEditMode && this.enquiryId) {
-      this.api.updateEnquiry(this.enquiryId, this.enquiry).subscribe(() => {
-        this.router.navigate(['/lead/sales-enquiry']);
+      this.api.updateEnquiry(this.enquiryId, this.enquiry).subscribe({
+        next: () => {
+          this.router.navigate(['/lead/sales-enquiry']);
+        },
+        error: (err) => {
+          console.error("Error updating sales enquiry:", err);
+          alert("Failed to update sales enquiry. Please check backend server console.");
+        }
       });
     } else {
-      this.api.postEnquiry(this.enquiry).subscribe(() => {
-        this.router.navigate(['/lead/sales-enquiry']);
+      this.api.postEnquiry(this.enquiry).subscribe({
+        next: () => {
+          this.router.navigate(['/lead/sales-enquiry']);
+        },
+        error: (err) => {
+          console.error("Error creating sales enquiry:", err);
+          alert("Failed to save sales enquiry. Please check backend server console.");
+        }
       });
     }
   }
