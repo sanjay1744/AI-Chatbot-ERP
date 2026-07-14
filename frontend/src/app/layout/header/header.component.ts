@@ -336,6 +336,7 @@ Augustine`
       next: (extractedItems) => {
         this.isExtracting = false;
         localStorage.setItem('extractedEmailProducts', JSON.stringify(extractedItems));
+        localStorage.setItem('sourceEmailId', this.selectedMail.id.toString());
         this.isNotificationsOpen = false;
         this.isEmailDetailsOpen = false;
         this.cdr.detectChanges();
@@ -358,6 +359,7 @@ Augustine`
           { group: 'Unmapped', productDescription: 'savio Pulley Savio Timing Belt Pulley 15T', partNumber: '15T', make: '—', model: '15T', quantity: 10, rate: 0, mapping: 'Unmapped' }
         ];
         localStorage.setItem('extractedEmailProducts', JSON.stringify(extractedItems));
+        localStorage.setItem('sourceEmailId', this.selectedMail.id.toString());
         this.isNotificationsOpen = false;
         this.isEmailDetailsOpen = false;
         this.cdr.detectChanges();

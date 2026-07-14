@@ -240,6 +240,13 @@ export class EnquiryFormComponent implements OnInit {
       this.activeTab = 'products'; // Switch to Product List tab
       localStorage.removeItem('extractedEmailProducts');
     }
+
+    const emailId = localStorage.getItem('sourceEmailId');
+    if (emailId) {
+      this.enquiry.sourceEmailId = +emailId;
+      this.enquiry.source = 'Email';
+      localStorage.removeItem('sourceEmailId');
+    }
   }
 
   loadMasters() {

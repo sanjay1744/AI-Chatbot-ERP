@@ -19,6 +19,32 @@ namespace AriyAI.ERP.Api.Data
             using (var connection = context.Database.GetDbConnection())
             {
                 connection.Open();
+
+                // Ensure the SalesEnquiries table has the SourceEmailId column
+                using (var checkColCmd = connection.CreateCommand())
+                {
+                    checkColCmd.CommandText = "PRAGMA table_info(SalesEnquiries);";
+                    using (var reader = checkColCmd.ExecuteReader())
+                    {
+                        bool hasSourceEmailId = false;
+                        while (reader.Read())
+                        {
+                            if (reader["name"].ToString() == "SourceEmailId")
+                            {
+                                hasSourceEmailId = true;
+                                break;
+                            }
+                        }
+                        reader.Close();
+                        
+                        if (!hasSourceEmailId)
+                        {
+                            checkColCmd.CommandText = "ALTER TABLE SalesEnquiries ADD COLUMN SourceEmailId INTEGER NULL;";
+                            checkColCmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = @"

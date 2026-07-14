@@ -75,3 +75,6 @@ out/
 
 # Office temporary files
 ~$*
+
+# Local uploads
+backend/AriyAI.ERP.Api/uploads/

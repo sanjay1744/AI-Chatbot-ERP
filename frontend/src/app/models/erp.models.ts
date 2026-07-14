@@ -42,6 +42,7 @@ export interface SalesEnquiry {
   remarks: string;
   status?: string;
   aging?: number;
+  sourceEmailId?: number;
   enquiryProducts: EnquiryProduct[];
   itemsCount?: number;
 }
