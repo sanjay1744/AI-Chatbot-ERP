@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, HostListener } from '@angular/core';
+import { Component, OnInit, inject, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -16,6 +16,7 @@ export class EnquiryFormComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   // Mode
   isEditMode = false;
@@ -98,6 +99,7 @@ export class EnquiryFormComponent implements OnInit {
         this.enquiry.customerId = createdCust.id;
         this.onCustomerChange();
         this.closeNewCustomerModal();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error("Error creating customer:", err);
@@ -250,9 +252,18 @@ export class EnquiryFormComponent implements OnInit {
   }
 
   loadMasters() {
-    this.api.getCustomers().subscribe(data => this.customers = data);
-    this.api.getAgents().subscribe(data => this.agents = data);
-    this.api.getProducts().subscribe(data => this.products = data);
+    this.api.getCustomers().subscribe(data => {
+      this.customers = data;
+      this.cdr.detectChanges();
+    });
+    this.api.getAgents().subscribe(data => {
+      this.agents = data;
+      this.cdr.detectChanges();
+    });
+    this.api.getProducts().subscribe(data => {
+      this.products = data;
+      this.cdr.detectChanges();
+    });
   }
 
   checkRoute() {
@@ -269,6 +280,7 @@ export class EnquiryFormComponent implements OnInit {
           data.expiryDate = data.expiryDate.split('T')[0];
         }
         this.enquiry = data;
+        this.cdr.detectChanges();
       });
     }
   }
@@ -455,6 +467,7 @@ export class EnquiryFormComponent implements OnInit {
             this.enquiry.enquiryProducts[this.mappingItemIndex].mapping = 'Unmapped';
           }
           this.closeMapItemModal();
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error("Error saving potential item:", err);

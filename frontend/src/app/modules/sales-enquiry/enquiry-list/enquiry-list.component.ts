@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -15,6 +15,7 @@ import { Customer } from '../../../models/erp.models';
 export class EnquiryListComponent implements OnInit {
   private api = inject(ApiService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   // Filter properties
   enquiryType = 'Pending';
@@ -34,7 +35,10 @@ export class EnquiryListComponent implements OnInit {
   }
 
   loadMasters() {
-    this.api.getCustomers().subscribe(data => this.customers = data);
+    this.api.getCustomers().subscribe(data => {
+      this.customers = data;
+      this.cdr.detectChanges();
+    });
   }
 
   loadEnquiries() {
@@ -50,6 +54,7 @@ export class EnquiryListComponent implements OnInit {
       next: (data) => {
         this.enquiries = data;
         this.recordsCount = data.length;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading enquiries:', err);
