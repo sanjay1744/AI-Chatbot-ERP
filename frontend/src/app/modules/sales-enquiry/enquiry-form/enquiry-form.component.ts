@@ -613,6 +613,9 @@ export class EnquiryFormComponent implements OnInit {
     if (this.isEditMode && this.enquiryId) {
       this.api.updateEnquiry(this.enquiryId, this.enquiry).subscribe({
         next: () => {
+          window.dispatchEvent(new CustomEvent('showToast', {
+            detail: { message: 'Enquiry updated successfully!', type: 'success' }
+          }));
           this.router.navigate(['/lead/sales-enquiry']);
         },
         error: (err) => {
@@ -623,6 +626,15 @@ export class EnquiryFormComponent implements OnInit {
     } else {
       this.api.postEnquiry(this.enquiry).subscribe({
         next: () => {
+          if (this.enquiry.sourceEmailId && this.enquiry.sourceEmailId > 0) {
+            window.dispatchEvent(new CustomEvent('showToast', {
+              detail: { message: 'Acknowledgement email sent & Enquiry created successfully!', type: 'success' }
+            }));
+          } else {
+            window.dispatchEvent(new CustomEvent('showToast', {
+              detail: { message: 'Enquiry created successfully!', type: 'success' }
+            }));
+          }
           this.router.navigate(['/lead/sales-enquiry']);
         },
         error: (err) => {

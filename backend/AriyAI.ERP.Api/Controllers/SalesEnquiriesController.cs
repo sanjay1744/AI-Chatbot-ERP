@@ -190,8 +190,13 @@ namespace AriyAI.ERP.Api.Controllers
                         message.From.Add(new MailboxAddress("Sales Team", user));
                         message.To.Add(new MailboxAddress(displayName, emailAddress));
 
-                        // Subject: should match the image (containing enquiry number)
-                        message.Subject = $"Acknowledgement: Sales Enquiry {fullEnquiry.EnquiryNumber} Created";
+                        // Subject: match original subject prefixed with "Re: " to thread under the same email
+                        var replySubject = origEmail.Subject ?? "";
+                        if (!replySubject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            replySubject = "Re: " + replySubject;
+                        }
+                        message.Subject = replySubject;
 
                         // Threading headers
                         if (!string.IsNullOrEmpty(origEmail.MessageId))

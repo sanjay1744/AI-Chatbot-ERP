@@ -441,4 +441,12 @@ Augustine`
     this.isUserMenuOpen = false;
     this.isNotificationsOpen = false;
   }
+
+  @HostListener('window:showToast', ['$event'])
+  onShowToast(event: Event) {
+    const customEvent = event as CustomEvent;
+    if (customEvent.detail) {
+      this.showToast(customEvent.detail.message, customEvent.detail.type || 'info');
+    }
+  }
 }
