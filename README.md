@@ -48,3 +48,57 @@ git checkout develop
 ```bash
 git checkout -b feature/my-new-feature
 ```
+
+---
+
+## Running the Application
+
+Follow the steps below to set up and run both the backend and frontend services on your machine.
+
+### Prerequisites
+
+* **.NET 9 SDK**: Required to compile and run the backend Web API.
+* **Node.js**: Required to install dependencies and run the Angular application.
+* **Ollama**: Download and run [Ollama](https://ollama.com/) locally to power the chatbot, then download the default model:
+  ```bash
+  ollama pull qwen2.5-coder:1.5b
+  ```
+  *(Note: You can customize the model name by updating the `OLLAMA_MODEL` variable in the root [.env](file:///d:/AriyAI/chatbot_/.env) file or in the backend's [appsettings.json](file:///d:/AriyAI/chatbot_/backend/AriyAI.ERP.Api/appsettings.json)).*
+
+### 1. Start the Backend (.NET Core Web API)
+
+The backend uses EF Core with SQLite. The database file (`erp.db`) will be automatically created, migrated, and seeded with mock manufacturing data upon application startup.
+
+1. Navigate to the API directory:
+   ```bash
+   cd backend/AriyAI.ERP.Api
+   ```
+2. Run the project:
+   ```bash
+   dotnet run
+   ```
+   *For hot-reloads during development, you can use:*
+   ```bash
+   dotnet watch
+   ```
+3. The API will be available at:
+   - HTTP: `http://localhost:5022`
+   - HTTPS: `https://localhost:7298`
+
+### 2. Start the Frontend (Angular 21)
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install npm dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm start
+   ```
+4. Open your browser and navigate to:
+   - `http://localhost:4200/`
+

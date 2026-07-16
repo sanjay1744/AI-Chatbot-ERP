@@ -32,35 +32,67 @@
         <label>Enquiry Date*</label>
         <input type="date" [(ngModel)]="enquiry.enquiryDate" />
       </div>
-      <div class="field-outlined">
+      <!-- Source Dropdown -->
+      <div class="field-outlined custom-dropdown" [class.open]="isSourceDropdownOpen">
         <label>Source</label>
-        <select [(ngModel)]="enquiry.source">
-          <option value="Agent">Agent</option>
-          <option value="Direct">Direct</option>
-          <option value="Website">Website</option>
-          <option value="Email">Email</option>
-        </select>
+        <div class="dropdown-trigger" (click)="toggleSourceDropdown()">
+          <span class="trigger-value" [class.placeholder]="!enquiry.source">{{ enquiry.source || 'Select' }}</span>
+          <div class="trigger-actions">
+            <span class="clear-btn" *ngIf="enquiry.source" (click)="clearSource($event)">✕</span>
+            <span class="arrow-icon"></span>
+          </div>
+        </div>
+        <div class="dropdown-menu" *ngIf="isSourceDropdownOpen">
+          <div class="dropdown-option" *ngFor="let opt of sourceOptions" [class.selected]="enquiry.source === opt" (click)="selectSource(opt)">
+            {{ opt }}
+          </div>
+        </div>
       </div>
-      <div class="field-outlined">
+
+      <!-- Lead Type Dropdown -->
+      <div class="field-outlined custom-dropdown" [class.open]="isLeadTypeDropdownOpen">
         <label>Lead Type*</label>
-        <select [(ngModel)]="enquiry.leadType">
-          <option value="Cold">Cold</option>
-          <option value="Warm">Warm</option>
-          <option value="Hot">Hot</option>
-        </select>
+        <div class="dropdown-trigger" (click)="toggleLeadTypeDropdown()">
+          <span class="trigger-value" [class.placeholder]="!enquiry.leadType">{{ enquiry.leadType || 'Select' }}</span>
+          <div class="trigger-actions">
+            <span class="clear-btn" *ngIf="enquiry.leadType" (click)="clearLeadType($event)">✕</span>
+            <span class="arrow-icon"></span>
+          </div>
+        </div>
+        <div class="dropdown-menu" *ngIf="isLeadTypeDropdownOpen">
+          <div class="dropdown-option" *ngFor="let opt of leadTypeOptions" [class.selected]="(enquiry.leadType || 'Select') === opt" (click)="selectLeadType(opt)">
+            {{ opt }}
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Row 2: Customer, Address -->
-    <div class="form-row cols-2">
-      <div class="field-outlined">
+    <!-- Row 2: Customer, New Button, Address -->
+    <div class="customer-row-container">
+      <!-- Customer Dropdown -->
+      <div class="field-outlined custom-dropdown customer-select-field" [class.open]="isCustomerDropdownOpen">
         <label>Customer*</label>
-        <select [(ngModel)]="enquiry.customerId" (change)="onCustomerChange()">
-          <option [value]="0"></option>
-          <option *ngFor="let cust of customers" [value]="cust.id">{{ cust.name }}</option>
-        </select>
+        <div class="dropdown-trigger" (click)="toggleCustomerDropdown()">
+          <span class="trigger-value" [class.placeholder]="!enquiry.customerId">{{ selectedCustomerName || '' }}</span>
+          <div class="trigger-actions">
+            <span class="clear-btn" *ngIf="enquiry.customerId" (click)="clearCustomer($event)">✕</span>
+            <span class="arrow-icon"></span>
+          </div>
+        </div>
+        <div class="dropdown-menu customer-dropdown-menu" *ngIf="isCustomerDropdownOpen">
+          <div class="dropdown-options-container">
+            <div class="dropdown-option" *ngFor="let cust of customers" [class.selected]="enquiry.customerId === cust.id" (click)="selectCustomer(cust)">
+              {{ cust.name }}
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="field-outlined">
+
+      <!-- New Button -->
+      <button type="button" class="btn-new-customer" (click)="openNewCustomerModal()">New</button>
+
+      <!-- Address Input -->
+      <div class="field-outlined address-field">
         <label>Address</label>
         <input type="text" [(ngModel)]="enquiry.address" />
       </div>
@@ -126,6 +158,7 @@
             <th>Model</th>
             <th>Quantity</th>
             <th>Rate</th>
+            <th>Mapping</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -133,12 +166,21 @@
           <tr *ngFor="let item of enquiry.enquiryProducts; let idx = index">
             <td>{{ idx + 1 }}</td>
             <td>{{ item.group }}</td>
-            <td>{{ item.productDescription }}</td>
+            <td><div class="text-truncate" [title]="item.productDescription">{{ item.productDescription }}</div></td>
             <td>{{ item.partNumber || '—' }}</td>
             <td>{{ item.make || '—' }}</td>
             <td>{{ item.model || '—' }}</td>
             <td>{{ item.quantity }}</td>
             <td>{{ item.rate | number:'1.2-2' }}</td>
+            <td>
+              <span class="badge" 
+                    [class.badge-approved]="item.mapping === 'Mapped' || item.mapping === 'Matched' || !item.mapping" 
+                    [class.badge-rejected]="item.mapping === 'Unmapped'"
+                    [style.cursor]="item.mapping === 'Unmapped' ? 'pointer' : 'default'"
+                    (click)="item.mapping === 'Unmapped' ? openMapItemModal(item, idx) : null">
+                {{ (item.mapping === 'Matched' || item.mapping === 'Mapped' || !item.mapping) ? 'Mapped' : 'Unmapped' }}
+              </span>
+            </td>
             <td style="text-align: center;">
               <button class="icon-action-btn delete" (click)="removeProductItem(idx)">
                 <span class="material-icons-outlined icon-sm">delete</span>
@@ -146,7 +188,7 @@
             </td>
           </tr>
           <tr *ngIf="enquiry.enquiryProducts.length === 0">
-            <td colspan="9" class="empty-state">No products added. Click "New Item" to add.</td>
+            <td colspan="10" class="empty-state">No products added. Click "New Item" to add.</td>
           </tr>
         </tbody>
       </table>
@@ -170,12 +212,87 @@
 
   <!-- TAB: Contacts -->
   <div class="tab-body" *ngIf="activeTab === 'contacts'">
-    <div class="info-card">
-      <h4>Primary Contact Info</h4>
-      <p><strong>Contact Person:</strong> Thalaimalai Naren</p>
-      <p><strong>Department:</strong> Marketing & Procurement</p>
-      <p><strong>Phone:</strong> +91 9443210987</p>
-      <p><strong>Email:</strong> naren.procure&#64;manjunatha.com</p>
+    <!-- Table Header Toolbar -->
+    <div class="section-header" style="margin-bottom: 16px;">
+      <div class="section-title-wrapper">
+        <span class="section-title-text">CONTACT PERSONS</span>
+        <span class="badge-loaded">{{ contacts.length }} loaded</span>
+      </div>
+      
+      <div class="section-actions">
+        <div class="inline-search">
+          <span class="material-icons-outlined icon-sm">search</span>
+          <input 
+            type="text" 
+            [(ngModel)]="searchContactQuery" 
+            (ngModelChange)="filterContacts()" 
+            placeholder="Search Contacts" 
+          />
+        </div>
+        <button class="btn btn-primary btn-sm" (click)="openAddContactModal()">
+          <span class="material-icons-outlined icon-sm">add</span> Add Contact
+        </button>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">
+              <input type="checkbox" />
+            </th>
+            <th>Is Primary</th>
+            <th>Name</th>
+            <th>Designation</th>
+            <th>Mobile</th>
+            <th>Email</th>
+            <th style="width: 100px; text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredContacts; let idx = index">
+            <td style="text-align: center;">
+              <input type="checkbox" />
+            </td>
+            <td>
+              <span *ngIf="item.isPrimary" class="badge badge-approved">Primary</span>
+              <span *ngIf="!item.isPrimary">—</span>
+            </td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.designation }}</td>
+            <td>{{ item.mobile || '—' }}</td>
+            <td>{{ item.email }}</td>
+            <td style="text-align: center;">
+              <button class="icon-action-btn edit" (click)="openEditContactModal(idx)" title="Edit Contact" style="margin-right: 6px;">
+                <span class="material-icons-outlined icon-sm">edit</span>
+              </button>
+              <button class="icon-action-btn delete" (click)="deleteContact(idx)" title="Delete Contact">
+                <span class="material-icons-outlined icon-sm">delete</span>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredContacts.length === 0">
+            <td colspan="7" class="empty-state">No contacts found. Click "Add Contact" to add.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Contacts Pagination -->
+    <div class="pagination">
+      <div class="page-size">
+        <span>Items per page:</span>
+        <select class="form-control page-size-select"><option>10</option></select>
+      </div>
+      <span class="page-info">1 - {{ filteredContacts.length }} of {{ filteredContacts.length }}</span>
+      <div class="page-buttons">
+        <button class="pg-btn" disabled>|&lt;</button>
+        <button class="pg-btn" disabled>&lt;</button>
+        <button class="pg-btn" disabled>&gt;</button>
+        <button class="pg-btn" disabled>&gt;|</button>
+      </div>
     </div>
   </div>
 
@@ -216,33 +333,353 @@
 <div class="modal-overlay" *ngIf="showProductModal">
   <div class="modal-box">
     <div class="modal-header">
-      <h3>Add New Item</h3>
-      <button class="modal-close" (click)="showProductModal = false">&times;</button>
+      <h3>Add New Product Item</h3>
+      <button class="modal-close" (click)="showProductModal = false">
+        <span class="material-icons-outlined">close</span>
+      </button>
     </div>
+    
     <div class="modal-body">
-      <div class="field-outlined" style="margin-bottom: 16px;">
-        <label>Select Product*</label>
-        <select [(ngModel)]="selectedProductId" (change)="onProductSelect()">
-          <option [value]="null">Select product...</option>
-          <option *ngFor="let prod of products" [value]="prod.id">
-            [{{ prod.group }}] {{ prod.description }} — Rate: {{ prod.rate }}
-          </option>
-        </select>
+      <!-- Search Panel Header -->
+      <div class="search-sub-header">
+        <span class="search-label">
+          SEARCH ITEM <span class="char-hint">(type 3+ characters)</span>
+        </span>
       </div>
-      <div class="form-row cols-2">
-        <div class="field-outlined">
-          <label>Quantity*</label>
-          <input type="number" [(ngModel)]="newProductQty" min="1" />
+
+      <!-- Search Input Row -->
+      <div class="search-row-layout">
+        <div class="search-input-wrapper">
+          <span class="material-icons-outlined search-icon">search</span>
+          <input 
+            type="text" 
+            [(ngModel)]="searchQuery" 
+            (ngModelChange)="onSearchQueryChange()" 
+            placeholder="e.g. roller, bearing, seal kit..." 
+            class="search-field" 
+          />
+          <span 
+            class="material-icons-outlined clear-icon" 
+            *ngIf="searchQuery" 
+            (click)="clearSearch()"
+          >close</span>
         </div>
-        <div class="field-outlined">
-          <label>Rate (INR)*</label>
-          <input type="number" [(ngModel)]="newProductRate" min="0" />
+        <button class="btn-new" (click)="addCustomProduct()">+ New</button>
+      </div>
+
+      <!-- Condition 1: Less than 3 characters and no items selected -->
+      <div class="empty-placeholder" *ngIf="selectedProductsForForm.length === 0 && searchQuery.length < 3">
+        <span class="material-icons-outlined placeholder-icon">add_shopping_cart</span>
+        <p class="placeholder-text">Search and select items above — you can pick multiple</p>
+      </div>
+
+      <!-- Search Results Dropdown List -->
+      <div class="search-dropdown-panel" *ngIf="searchQuery.length >= 3">
+        <div 
+          class="search-result-row" 
+          *ngFor="let prod of searchResults" 
+          (click)="selectProduct(prod)"
+        >
+          <div class="result-title">{{ prod.description }}</div>
+          <div class="result-subtitle">HSN: 84483990 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ prod.group }}</div>
+        </div>
+        <div class="search-dropdown-panel empty" *ngIf="searchResults.length === 0">
+          No matching products found. Click <strong>+ New</strong> to add a custom item.
+        </div>
+      </div>
+
+      <!-- Selected Items Cards List -->
+      <div class="selected-items-section" *ngIf="selectedProductsForForm.length > 0">
+        <div class="section-title-row">
+          <span class="section-title">SELECTED ITEMS</span>
+          <span class="selected-badge">{{ selectedProductsForForm.length }}</span>
+        </div>
+        
+        <div class="selected-cards-list">
+          <div class="selected-card" *ngFor="let item of selectedProductsForForm; let idx = index">
+            <div class="selected-card-header">
+              <span class="card-num-title">{{ idx + 1 }}. {{ item.productDescription || 'New Custom Item' }}</span>
+              <button class="card-remove-btn" (click)="removeSelectedFormItem(idx)">&times;</button>
+            </div>
+            
+            <div class="selected-card-body">
+              <!-- Group & Description Row -->
+              <div class="form-grid-3">
+                <div class="form-field">
+                  <label class="form-label">GROUP DESCRIPTION</label>
+                  <input type="text" [(ngModel)]="item.group" class="form-control" />
+                </div>
+                <div class="form-field colspan-2">
+                  <label class="form-label">PRODUCT DESCRIPTION</label>
+                  <input type="text" [(ngModel)]="item.productDescription" class="form-control" />
+                </div>
+              </div>
+              
+              <!-- Specs Row -->
+              <div class="form-grid-4">
+                <div class="form-field">
+                  <label class="form-label">PART NO</label>
+                  <input type="text" [(ngModel)]="item.partNumber" placeholder="Part number" class="form-control" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">UOM</label>
+                  <input type="text" [(ngModel)]="item.uom" class="form-control" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">MAKE</label>
+                  <select [(ngModel)]="item.make" class="form-control">
+                    <option value="">— Select Make —</option>
+                    <option *ngFor="let m of item.makes" [value]="m">{{ m }}</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">MODEL</label>
+                  <select [(ngModel)]="item.model" class="form-control">
+                    <option value="">— Select Model —</option>
+                    <option *ngFor="let mo of item.models" [value]="mo">{{ mo }}</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- Quantity & Rate Row -->
+              <div class="form-grid-4">
+                <div class="form-field">
+                  <label class="form-label">QUANTITY</label>
+                  <input type="number" [(ngModel)]="item.quantity" min="1" class="form-control" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">RATE (INR)</label>
+                  <input type="number" [(ngModel)]="item.rate" min="0" class="form-control" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+    
     <div class="modal-footer">
-      <button class="btn btn-outline" (click)="showProductModal = false">Cancel</button>
-      <button class="btn btn-primary" [disabled]="!selectedProductId" (click)="addProductItem()">Add Item</button>
+      <button class="btn-exit" (click)="showProductModal = false">Exit</button>
+      <button 
+        class="btn btn-primary" 
+        [disabled]="selectedProductsForForm.length === 0" 
+        (click)="addSelectedProducts()"
+      >
+        <span class="material-icons-outlined icon-sm">shopping_cart</span>
+        Add {{ selectedProductsForForm.length > 0 ? selectedProductsForForm.length : '' }} Product{{ selectedProductsForForm.length > 1 ? 's' : '' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Contact Modal -->
+<div class="modal-overlay" *ngIf="showContactModal">
+  <div class="modal-box contact-modal-box">
+    <div class="modal-header contact-modal-header">
+      <h3>NEW CONTACT</h3>
+      <button class="modal-close contact-modal-close" (click)="showContactModal = false">
+        <span class="material-icons-outlined" style="color: #ffffff; font-size: 20px;">close</span>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- 2 Column Inputs -->
+      <div class="contact-form-grid">
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.name" placeholder="Contact Name*" class="form-control contact-input" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.designation" placeholder="Designation*" class="form-control contact-input" />
+        </div>
+        
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.phoneHome" placeholder="Phone (Home)" class="form-control contact-input" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.phoneOffice" placeholder="Phone (Office)" class="form-control contact-input" />
+        </div>
+        
+        <div class="form-field">
+          <input type="text" [(ngModel)]="contactForm.mobile" placeholder="Mobile Number*" class="form-control contact-input" />
+        </div>
+        <div class="form-field">
+          <input type="email" [(ngModel)]="contactForm.email" placeholder="Email ID*" class="form-control contact-input" />
+        </div>
+      </div>
+      
+      <!-- Checkboxes -->
+      <div class="checkbox-row">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="contactForm.active" />
+          Active
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="contactForm.isPrimary" />
+          Is Primary Contact
+        </label>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-exit" (click)="showContactModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="saveContact()">
+        {{ isContactEditMode ? 'Save' : 'Add' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Modal -->
+<div class="modal-overlay" *ngIf="showNewCustomerModal">
+  <div class="modal-box customer-modal-box">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0b4c79 0%, #1e3a8a 100%);">
+      <h3 style="color: #ffffff;">ADD NEW CUSTOMER</h3>
+      <button class="modal-close" (click)="closeNewCustomerModal()">
+        <span class="material-icons-outlined" style="color: #ffffff; font-size: 20px;">close</span>
+      </button>
+    </div>
+    
+    <div class="modal-body" style="gap: 16px;">
+      <div class="form-field">
+        <input type="text" [(ngModel)]="newCustomerForm.name" placeholder="Customer Name*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+      </div>
+      <div class="form-field">
+        <input type="text" [(ngModel)]="newCustomerForm.address" placeholder="Address*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+      </div>
+      <div class="contact-form-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 4px;">
+        <div class="form-field">
+          <input type="text" [(ngModel)]="newCustomerForm.city" placeholder="City*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="newCustomerForm.state" placeholder="State*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+        </div>
+        <div class="form-field">
+          <input type="text" [(ngModel)]="newCustomerForm.country" placeholder="Country*" class="form-control contact-input" style="height: 38px; font-size: 13px;" />
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-exit" (click)="closeNewCustomerModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="!newCustomerForm.name" (click)="saveNewCustomer()">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Map Item Modal -->
+<div class="modal-overlay" *ngIf="showMapItemModal">
+  <div class="modal-box map-item-modal-box" style="border-radius: 12px; max-width: 550px;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 16px 20px;">
+      <h3 style="color: #ffffff; letter-spacing: 0.5px; font-weight: 600; margin: 0; font-size: 16px;">MAP ITEM</h3>
+      <button class="modal-close" (click)="closeMapItemModal()" style="background: transparent; border: none; cursor: pointer;">
+        <span class="material-icons-outlined" style="color: #ffffff; font-size: 20px;">close</span>
+      </button>
+    </div>
+    
+    <div class="modal-body" style="gap: 16px; display: flex; flex-direction: column; padding: 20px;">
+      <!-- Imported Item Info (Read only section) -->
+      <div class="imported-item-section" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px;">
+        <h4 style="margin-top: 0; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Imported Item Details</h4>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div>
+            <span style="font-size: 12px; color: #64748b; font-weight: 500;">Description: </span>
+            <span style="font-size: 13px; color: #1e293b; font-weight: 600;">{{ mappingItem?.productDescription }}</span>
+          </div>
+          <div style="display: flex; gap: 24px;">
+            <div>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">Part Number: </span>
+              <span style="font-size: 13px; color: #1e293b; font-weight: 600;">{{ mappingItem?.partNumber || '—' }}</span>
+            </div>
+            <div>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">Rate: </span>
+              <span style="font-size: 13px; color: #1e293b; font-weight: 600;">INR {{ mappingItem?.rate | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search database item section -->
+      <div class="search-db-section" style="display: flex; flex-direction: column; gap: 6px; position: relative;">
+        <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; text-align: left;">Search Manufacturer Database</label>
+        <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 9999px; background: #ffffff; padding: 0 16px; height: 42px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+          <span class="material-icons-outlined" style="color: #94a3b8; margin-right: 8px; font-size: 20px;">search</span>
+          <input 
+            type="text" 
+            [(ngModel)]="mapSearchQuery" 
+            (ngModelChange)="onMapSearchQueryChange()" 
+            placeholder="Search by name, part number, or make (min. 3 chars)..." 
+            style="border: none; outline: none; width: 100%; font-size: 13px; color: #1e293b;"
+          />
+          <span 
+            class="material-icons-outlined" 
+            *ngIf="mapSearchQuery" 
+            (click)="clearMapSearch()"
+            style="color: #94a3b8; cursor: pointer; font-size: 18px;"
+          >close</span>
+        </div>
+
+        <!-- Suggestion list -->
+        <div class="search-dropdown-panel" *ngIf="mapSearchQuery.length >= 3 && mapSearchResults.length > 0" style="position: absolute; top: 70px; left: 0; right: 0; z-index: 1000; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+          <div 
+            class="search-result-row" 
+            *ngFor="let prod of mapSearchResults" 
+            (click)="selectMapProduct(prod)"
+            style="padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 2px;"
+          >
+            <div class="result-title" style="font-weight: 600; font-size: 13px; color: #1e293b; text-align: left;">{{ prod.description }}</div>
+            <div class="result-subtitle" style="font-size: 11px; color: #64748b; text-align: left;">
+              Part: {{ prod.partNumber || '—' }} &nbsp;|&nbsp; Make: {{ prod.make || '—' }} &nbsp;|&nbsp; Rate: INR {{ prod.rate | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="search-dropdown-panel empty" *ngIf="mapSearchQuery.length >= 3 && mapSearchResults.length === 0 && !selectedMapProduct" style="position: absolute; top: 70px; left: 0; right: 0; z-index: 1000; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 12px; color: #64748b; text-align: left;">
+          No matching products found. Item will be saved as a Potential Item.
+        </div>
+      </div>
+
+      <!-- Selected product display -->
+      <div *ngIf="selectedMapProduct" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="text-align: left;">
+          <div style="font-size: 11px; font-weight: 600; color: #047857; text-transform: uppercase; letter-spacing: 0.5px;">Selected Database Product</div>
+          <div style="font-size: 13px; font-weight: 600; color: #065f46; margin-top: 2px;">{{ selectedMapProduct.description }}</div>
+          <div style="font-size: 11px; color: #047857; margin-top: 1px;">Part: {{ selectedMapProduct.partNumber }} | Make: {{ selectedMapProduct.make }}</div>
+        </div>
+        <button (click)="clearMapSearch()" style="background: transparent; border: none; font-size: 20px; color: #047857; cursor: pointer;">&times;</button>
+      </div>
+
+      <!-- Alert Banner -->
+      <div class="alert-banner" [style.background]="selectedMapProduct ? '#f0fdf4' : '#fffbeb'" [style.border]="selectedMapProduct ? '1px solid #bbf7d0' : '1px solid #fef08a'" style="border-radius: 8px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; text-align: left;">
+        <span class="material-icons-outlined" [style.color]="selectedMapProduct ? '#16a34a' : '#d97706'" style="font-size: 20px;">
+          {{ selectedMapProduct ? 'check_circle' : 'warning' }}
+        </span>
+        <div style="font-size: 12px; line-height: 1.5;">
+          <div *ngIf="!selectedMapProduct" style="font-weight: 600; color: #854d0e;">SAVE AS POTENTIAL ITEM</div>
+          <div *ngIf="!selectedMapProduct" style="color: #a16207; margin-top: 2px;">
+            This item is not mapped to any database product. Confirming will save it to the **Potential Items** list and keep it as unmapped in the grid.
+          </div>
+          
+          <div *ngIf="selectedMapProduct" style="font-weight: 600; color: #166534;">MAP TO PRODUCT</div>
+          <div *ngIf="selectedMapProduct" style="color: #15803d; margin-top: 2px;">
+            This item will be mapped to the selected manufacturer product. The details in the enquiry grid will be updated automatically.
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer" style="padding: 16px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+      <button class="btn btn-outline" (click)="closeMapItemModal()" style="border-radius: 9999px; padding: 8px 24px; font-size: 13px; font-weight: 500; height: 38px;">Cancel</button>
+      <button 
+        class="btn" 
+        [style.background]="selectedMapProduct ? '#10b981' : '#f59e0b'" 
+        style="color: #ffffff; border-radius: 9999px; padding: 8px 24px; font-size: 13px; font-weight: 600; height: 38px; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);"
+        (click)="confirmItemMapping()"
+      >
+        <span class="material-icons-outlined" style="font-size: 18px;">done</span>
+        {{ selectedMapProduct ? 'Confirm Mapping' : 'Save Potential Item' }}
+      </button>
     </div>
   </div>
 </div>

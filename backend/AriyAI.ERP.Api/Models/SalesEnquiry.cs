@@ -45,6 +45,8 @@ namespace AriyAI.ERP.Api.Models
 
         public int Aging { get; set; }
 
+        public int? SourceEmailId { get; set; }
+
         public List<EnquiryProduct> EnquiryProducts { get; set; } = new();
     }
 }

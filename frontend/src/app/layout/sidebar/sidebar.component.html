@@ -1,7 +1,11 @@
 <div class="sidebar">
   <!-- Logo -->
   <div class="sidebar-logo">
-    <span class="logo-text">AriyAI</span>
+    <a [routerLink]="['/dashboard']" class="logo-box-link">
+      <div class="logo-box">
+        <span class="logo-text">AriyAI</span>
+      </div>
+    </a>
   </div>
 
   <!-- Navigation -->
@@ -9,41 +13,72 @@
     <ul class="nav-list">
       @for (menu of menus; track menu.name) {
         <li class="nav-item">
-          <!-- Parent Menu -->
+          <!-- Level 1 Parent Item -->
           @if (menu.link) {
+            <!-- Direct link (e.g. AI Assistant) -->
             @if (menu.name === 'AI Assistant') {
-              <div class="nav-link" [class.active]="isCopilotOpen()" (click)="toggleCopilot($event)">
-                <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
-                <span class="nav-text">{{ menu.name }}</span>
+              <div class="menu-item level-1-item" [class.active]="isCopilotOpen()" (click)="toggleCopilot($event)">
+                <span class="chevron-placeholder"></span>
+                <span class="material-icons menu-icon">{{ menu.icon }}</span>
+                <span class="menu-text">{{ menu.name }}</span>
               </div>
             } @else {
-              <a class="nav-link" [routerLink]="menu.link" routerLinkActive="active">
-                <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
-                <span class="nav-text">{{ menu.name }}</span>
+              <a class="menu-item level-1-item link" [routerLink]="menu.link" routerLinkActive="active">
+                <span class="chevron-placeholder"></span>
+                <span class="material-icons menu-icon">{{ menu.icon }}</span>
+                <span class="menu-text">{{ menu.name }}</span>
               </a>
             }
           } @else {
-            <div class="nav-link" [class.has-children]="menu.children.length > 0" [class.expanded]="menu.isOpen" (click)="toggleMenu(menu)">
-              <span class="material-icons-outlined nav-icon">{{ menu.icon }}</span>
-              <span class="nav-text">{{ menu.name }}</span>
-              @if (menu.children.length > 0) {
-                <span class="material-icons-outlined nav-arrow">{{ menu.isOpen ? 'expand_more' : 'chevron_right' }}</span>
-              }
+            <!-- Expandable folder -->
+            <div class="menu-item level-1-item folder" [class.expanded]="menu.isOpen" (click)="toggleMenu(menu)">
+              <span class="material-icons chevron-icon">
+                {{ menu.isOpen ? 'keyboard_arrow_down' : 'keyboard_arrow_right' }}
+              </span>
+              <span class="material-icons menu-icon">{{ menu.icon }}</span>
+              <span class="menu-text">{{ menu.name }}</span>
             </div>
-          }
 
-          <!-- Children -->
-          @if (menu.isOpen && menu.children.length > 0) {
-            <ul class="sub-nav-list">
-              @for (child of menu.children; track child.name) {
-                <li class="sub-nav-item">
-                  <a class="sub-nav-link" [routerLink]="child.link" routerLinkActive="active">
-                    <span class="material-icons-outlined sub-nav-icon icon-sm">{{ child.icon || 'description' }}</span>
-                    <span>{{ child.name }}</span>
-                  </a>
-                </li>
-              }
-            </ul>
+            <!-- Level 2 Submenu -->
+            @if (menu.isOpen && menu.children.length > 0) {
+              <ul class="sub-nav-list level-2-list">
+                @for (child of menu.children; track child.name) {
+                  <li class="nav-sub-item">
+                    @if (child.children && child.children.length > 0) {
+                      <!-- Expandable Level 2 Folder -->
+                      <div class="menu-item level-2-item folder" [class.expanded]="child.isOpen" (click)="toggleSubMenu(child, $event)">
+                        <span class="material-icons chevron-icon">
+                          {{ child.isOpen ? 'keyboard_arrow_down' : 'keyboard_arrow_right' }}
+                        </span>
+                        <span class="material-icons menu-icon">{{ child.icon }}</span>
+                        <span class="menu-text">{{ child.name }}</span>
+                      </div>
+
+                      <!-- Level 3 Submenu -->
+                      @if (child.isOpen) {
+                        <ul class="sub-nav-list level-3-list">
+                          @for (subChild of child.children; track subChild.name) {
+                            <li class="nav-sub-sub-item">
+                              <a class="menu-item level-3-item link" [routerLink]="subChild.link" routerLinkActive="active">
+                                <span class="material-icons menu-icon">{{ subChild.icon || 'description' }}</span>
+                                <span class="menu-text">{{ subChild.name }}</span>
+                              </a>
+                            </li>
+                          }
+                        </ul>
+                      }
+                    } @else {
+                      <!-- Direct Link Level 2 -->
+                      <a class="menu-item level-2-item link" [routerLink]="child.link" routerLinkActive="active">
+                        <span class="chevron-placeholder"></span>
+                        <span class="material-icons menu-icon">{{ child.icon }}</span>
+                        <span class="menu-text">{{ child.name }}</span>
+                      </a>
+                    }
+                  </li>
+                }
+              </ul>
+            }
           }
         </li>
       }

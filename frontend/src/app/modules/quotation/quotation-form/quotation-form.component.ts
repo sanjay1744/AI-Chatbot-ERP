@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -16,6 +16,7 @@ export class QuotationFormComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   // Mode
   isEditMode = false;
@@ -56,9 +57,18 @@ export class QuotationFormComponent implements OnInit {
   }
 
   loadMasters() {
-    this.api.getCustomers().subscribe(data => this.customers = data);
-    this.api.getAgents().subscribe(data => this.agents = data);
-    this.api.getProducts().subscribe(data => this.products = data);
+    this.api.getCustomers().subscribe(data => {
+      this.customers = data;
+      this.cdr.detectChanges();
+    });
+    this.api.getAgents().subscribe(data => {
+      this.agents = data;
+      this.cdr.detectChanges();
+    });
+    this.api.getProducts().subscribe(data => {
+      this.products = data;
+      this.cdr.detectChanges();
+    });
   }
 
   checkRoute() {
@@ -74,6 +84,36 @@ export class QuotationFormComponent implements OnInit {
           data.dueDate = data.dueDate.split('T')[0];
         }
         this.quotation = data;
+        this.cdr.detectChanges();
+      });
+    } else {
+      // Check query parameter for conversion from enquiry
+      this.route.queryParams.subscribe(params => {
+        const enquiryId = params['enquiryId'];
+        if (enquiryId) {
+          this.api.getEnquiry(+enquiryId).subscribe(enq => {
+            this.quotation.customerId = enq.customerId;
+            this.quotation.address = enq.address;
+            this.quotation.agentId = enq.agentId || enq.assignToId;
+            this.quotation.customerReference = enq.enquiryNumber || '';
+            this.quotation.subject1 = enq.remarks || '';
+            
+            // Map products
+            if (enq.enquiryProducts) {
+              this.quotation.quotationProducts = enq.enquiryProducts.map(ep => ({
+                productId: ep.productId,
+                group: ep.group || '',
+                productDescription: ep.productDescription || ep.partNumber || '',
+                partNumber: ep.partNumber || '',
+                make: ep.make || '',
+                model: ep.model || '',
+                quantity: ep.quantity,
+                rate: ep.rate
+              }));
+            }
+            this.cdr.detectChanges();
+          });
+        }
       });
     }
   }

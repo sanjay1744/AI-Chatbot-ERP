@@ -42,6 +42,7 @@ export interface SalesEnquiry {
   remarks: string;
   status?: string;
   aging?: number;
+  sourceEmailId?: number;
   enquiryProducts: EnquiryProduct[];
   itemsCount?: number;
 }
@@ -57,6 +58,7 @@ export interface EnquiryProduct {
   model: string;
   quantity: number;
   rate: number;
+  mapping?: string;
 }
 
 export interface Quotation {
@@ -89,5 +91,12 @@ export interface QuotationProduct {
   make: string;
   model: string;
   quantity: number;
+  rate: number;
+}
+
+export interface PotentialItem {
+  id?: number;
+  name: string;
+  partNumber: string;
   rate: number;
 }

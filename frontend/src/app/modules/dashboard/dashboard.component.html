@@ -1,0 +1,142 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div>
+      <h1>Dashboard Overview</h1>
+      <p>Welcome back, here's what's happening today.</p>
+    </div>
+    <button class="btn-export">
+      <span class="material-icons-outlined">cloud_download</span>
+      Export Report
+    </button>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrapper revenue">
+        <span class="material-icons-outlined">payments</span>
+      </div>
+      <div class="stat-details">
+        <span class="stat-label">Total Revenue</span>
+        <span class="stat-value">$54,230</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrapper users">
+        <span class="material-icons-outlined">person_add</span>
+      </div>
+      <div class="stat-details">
+        <span class="stat-label">New Users</span>
+        <span class="stat-value">1,203</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrapper orders">
+        <span class="material-icons-outlined">pending_actions</span>
+      </div>
+      <div class="stat-details">
+        <span class="stat-label">Pending Orders</span>
+        <span class="stat-value">45</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrapper sales">
+        <span class="material-icons-outlined">percent</span>
+      </div>
+      <div class="stat-details">
+        <span class="stat-label">Sales %</span>
+        <span class="stat-value">99.9%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Middle Grid (Revenue Analytics & Agent Performance) -->
+  <div class="middle-grid">
+    <div class="dashboard-card revenue-analytics-card">
+      <div class="card-header-row">
+        <span class="card-title">Revenue Analytics</span>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <span class="legend-color revenue"></span>
+            <span class="legend-label">Revenue</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color expenses"></span>
+            <span class="legend-label">Expenses</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas #revenueChart></canvas>
+      </div>
+    </div>
+
+    <div class="dashboard-card agent-perf-card">
+      <span class="card-title">Agent Performance</span>
+      <div class="agent-name">U. THALAIMALAI</div>
+      <div class="agent-metric">
+        3,886.4K <span class="metric-sub">current yr</span>
+      </div>
+      
+      <div class="agent-details-row">
+        <div class="detail-item">
+          <span class="detail-label">YoY Change</span>
+          <span class="detail-value negative">-59.1% YoY</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Conversion Rate</span>
+          <span class="detail-value">Conv: 85.1%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Grid (Sales and Pipeline Charts) -->
+  <div class="bottom-grid">
+    <div class="dashboard-card">
+      <div class="card-header-row">
+        <span class="card-title">Sales - Current vs Last Year</span>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <span class="legend-color current-yr"></span>
+            <span class="legend-label">Current Year</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color last-yr"></span>
+            <span class="legend-label">Last Year</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas #salesChart></canvas>
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <div class="card-header-row">
+        <span class="card-title">Pipeline - Enquiries / Quotations / Orders</span>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <span class="legend-color pipeline-enquiries"></span>
+            <span class="legend-label">Enquiries</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color pipeline-quotations"></span>
+            <span class="legend-label">Quotations</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color pipeline-orders"></span>
+            <span class="legend-label">Sales Orders</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas #pipelineChart></canvas>
+      </div>
+    </div>
+  </div>
+</div>
