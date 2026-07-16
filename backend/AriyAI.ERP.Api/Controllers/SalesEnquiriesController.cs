@@ -185,7 +185,7 @@ namespace AriyAI.ERP.Api.Controllers
                             Console.WriteLine("SMTP email credentials not configured in environment. Cannot send reply.");
                             return;
                         }
-
+    
                         var message = new MimeMessage();
                         message.From.Add(new MailboxAddress("Sales Team", user));
                         message.To.Add(new MailboxAddress(displayName, emailAddress));
