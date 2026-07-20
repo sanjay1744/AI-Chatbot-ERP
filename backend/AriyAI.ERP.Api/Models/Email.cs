@@ -41,5 +41,10 @@ namespace AriyAI.ERP.Api.Models
 
         [Required]
         public bool IsDeleted { get; set; } = false;
+
+        public int? AgentId { get; set; }
+
+        [ForeignKey("AgentId")]
+        public Agent? Agent { get; set; }
     }
 }

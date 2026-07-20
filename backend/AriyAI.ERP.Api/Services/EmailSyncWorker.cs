@@ -12,6 +12,7 @@ using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Search;
 using MimeKit;
+using Microsoft.EntityFrameworkCore;
 using AriyAI.ERP.Api.Data;
 using AriyAI.ERP.Api.Models;
 
@@ -53,25 +54,76 @@ namespace AriyAI.ERP.Api.Services
             }
         }
 
-        public async Task<int> SyncEmailsAsync(CancellationToken cancellationToken)
+        public async Task<int> SyncEmailsAsync(CancellationToken cancellationToken, int? agentId = null)
         {
-            var user = Environment.GetEnvironmentVariable("EMAIL_USER");
-            var password = Environment.GetEnvironmentVariable("EMAIL_PASSWORD");
-            var server = Environment.GetEnvironmentVariable("IMAP_SERVER") ?? "imap.gmail.com";
-            var portStr = Environment.GetEnvironmentVariable("IMAP_PORT") ?? "993";
-            int port = int.TryParse(portStr, out int p) ? p : 993;
+            using var scope = _serviceProvider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ErpDbContext>();
+
+            if (agentId.HasValue)
+            {
+                var config = await db.AgentEmailConfigurations
+                    .FirstOrDefaultAsync(c => c.AgentId == agentId.Value, cancellationToken);
+
+                if (config == null)
+                {
+                    _logger.LogWarning("Email configuration not found for Agent ID: {AgentId}. Skipping sync.", agentId.Value);
+                    return 0;
+                }
+
+                int count = await SyncForConfigurationAsync(db, config, cancellationToken);
+                if (count > 0)
+                {
+                    config.LastSyncedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                return count;
+            }
+            else
+            {
+                var configs = await db.AgentEmailConfigurations.ToListAsync(cancellationToken);
+                int totalSynced = 0;
+                foreach (var config in configs)
+                {
+                    try
+                    {
+                        int count = await SyncForConfigurationAsync(db, config, cancellationToken);
+                        if (count > 0)
+                        {
+                            config.LastSyncedAt = DateTime.UtcNow;
+                            totalSynced += count;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error occurred during background email sync for Agent ID: {AgentId} ({Username})", config.AgentId, config.ImapUsername);
+                    }
+                }
+                if (totalSynced > 0)
+                {
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                return totalSynced;
+            }
+        }
+
+        private async Task<int> SyncForConfigurationAsync(ErpDbContext db, AgentEmailConfiguration config, CancellationToken cancellationToken)
+        {
+            var user = config.ImapUsername;
+            var password = CryptographyHelper.Decrypt(config.ImapPassword);
+            var server = config.ImapServer;
+            var port = config.ImapPort;
+            var useSsl = config.UseSsl;
 
             if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password))
             {
-                _logger.LogWarning("Email credentials (EMAIL_USER / EMAIL_PASSWORD) not configured. Skipping sync.");
+                _logger.LogWarning("Email credentials for Agent ID {AgentId} are incomplete. Skipping sync.", config.AgentId);
                 return 0;
             }
 
             using var client = new ImapClient();
             client.Timeout = 20000; // 20 seconds timeout to prevent infinite hangs
             
-            // Allow SSL connection
-            await client.ConnectAsync(server, port, true, cancellationToken);
+            await client.ConnectAsync(server, port, useSsl, cancellationToken);
             await client.AuthenticateAsync(user, password, cancellationToken);
 
             var inbox = client.Inbox;
@@ -84,13 +136,10 @@ namespace AriyAI.ERP.Api.Services
                 return 0;
             }
 
-            // Fetch last 20 messages using index-based range Fetch instead of SearchQuery.All (which downloads all UIDs)
+            // Fetch last 20 messages using index-based range Fetch
             int startIdx = Math.Max(0, totalMessages - 20);
             int endIdx = totalMessages - 1;
             var summaries = await inbox.FetchAsync(startIdx, endIdx, MessageSummaryItems.Envelope | MessageSummaryItems.UniqueId, cancellationToken);
-
-            using var scope = _serviceProvider.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ErpDbContext>();
 
             int newEmailsCount = 0;
 
@@ -109,8 +158,8 @@ namespace AriyAI.ERP.Api.Services
 
                 var messageId = envelope.MessageId?.Trim('<', '>', ' ', '\t') ?? $"fallback-{envelope.Date.Value.Ticks}";
 
-                // Idempotency Check
-                bool exists = db.Emails.Any(e => e.MessageId == messageId);
+                // Idempotency Check scoped per Agent
+                bool exists = db.Emails.Any(e => e.MessageId == messageId && e.AgentId == config.AgentId);
                 if (exists) continue;
 
                 // Download full message content only if not already saved
@@ -135,7 +184,8 @@ namespace AriyAI.ERP.Api.Services
                     AttachmentsJson = GetAttachmentsJson(message),
                     ReceivedAt = envelope.Date?.DateTime ?? DateTime.UtcNow,
                     IsRead = false,
-                    IsDeleted = false
+                    IsDeleted = false,
+                    AgentId = config.AgentId // Set owner agent
                 };
 
                 db.Emails.Add(emailEntity);
@@ -144,12 +194,7 @@ namespace AriyAI.ERP.Api.Services
 
             if (newEmailsCount > 0)
             {
-                await db.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Successfully synced {Count} new emails.", newEmailsCount);
-            }
-            else
-            {
-                _logger.LogInformation("Synchronization complete. No new emails found.");
+                _logger.LogInformation("Successfully synced {Count} new emails for Agent {AgentId}.", newEmailsCount, config.AgentId);
             }
 
             await client.DisconnectAsync(true, cancellationToken);

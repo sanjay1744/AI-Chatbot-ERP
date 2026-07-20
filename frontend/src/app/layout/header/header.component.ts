@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { timeout, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -18,6 +19,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
   private sanitizer = inject(DomSanitizer);
+  private authService = inject(AuthService);
 
   userName = 'Thalaimalai';
   userRole = 'Naren Marketing';
@@ -158,10 +160,25 @@ Augustine`
   };
 
   ngOnInit() {
-    this.fetchEmails();
-    // Poll for new emails every 2 minutes (120,000 ms)
+    this.authService.currentUser$.subscribe({
+      next: (user: any) => {
+        if (user) {
+          this.userName = user.name;
+          this.userRole = user.email;
+          this.fetchEmails();
+        } else {
+          this.userName = 'Thalaimalai';
+          this.userRole = 'Naren Marketing';
+        }
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Poll for new emails every 2 minutes if authenticated
     this.pollInterval = setInterval(() => {
-      this.fetchEmails();
+      if (this.authService.isAuthenticated()) {
+        this.fetchEmails();
+      }
     }, 120000);
   }
 
@@ -448,5 +465,17 @@ Augustine`
     if (customEvent.detail) {
       this.showToast(customEvent.detail.message, customEvent.detail.type || 'info');
     }
+  }
+
+  logout() {
+    this.logoutUserMenu();
+  }
+
+  private logoutUserMenu() {
+    this.authService.logout().subscribe();
+  }
+
+  goToEmailSettings() {
+    this.router.navigate(['/settings/email']);
   }
 }

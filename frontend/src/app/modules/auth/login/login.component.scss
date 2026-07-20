@@ -1,0 +1,346 @@
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  z-index: 99999;
+  
+  // Dotted background matching the screenshot
+  background-color: #f7f9fb;
+  background-image: 
+    radial-gradient(circle at 80% 80%, #e0e9f1 0%, transparent 60%),
+    radial-gradient(circle at 20% 20%, #eef4f8 0%, transparent 60%),
+    radial-gradient(#c5d0db 1.2px, transparent 1.2px);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+  
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #1e293b;
+}
+
+.login-card {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  padding: 3rem 2.5rem 2rem 2.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+
+  @media (max-width: 480px) {
+    max-width: 90%;
+    padding: 2rem 1.5rem;
+  }
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+
+  .logo-text {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #0e6fdc; // Brand blue
+    letter-spacing: -0.5px;
+  }
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.4rem 0;
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0;
+  }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  color: #b91c1c;
+  font-size: 0.88rem;
+}
+
+.form-group {
+  position: relative;
+
+  input {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.95rem;
+    color: #1e293b;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: #0e6fdc;
+      box-shadow: 0 0 0 3px rgba(14, 111, 220, 0.1);
+    }
+
+    &:disabled {
+      background-color: #e2e8f0;
+      color: #64748b;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.password-group {
+  input {
+    padding-right: 46px; // Space for eye icon
+  }
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  
+  &:hover {
+    color: #1e293b;
+  }
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+  margin-bottom: 0.2rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  color: #475569;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+
+    &:checked ~ .checkbox-box {
+      background-color: #ffffff;
+      border-color: #475569;
+
+      &:after {
+        display: block;
+      }
+    }
+  }
+
+  .checkbox-box {
+    height: 16px;
+    width: 16px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 3px;
+    position: relative;
+    background-color: #ffffff;
+
+    &:after {
+      content: "";
+      position: absolute;
+      display: none;
+      left: 4px;
+      top: 1px;
+      width: 4px;
+      height: 7px;
+      border: solid #475569;
+      border-width: 0 1.8px 1.8px 0;
+      transform: rotate(45deg);
+    }
+  }
+}
+
+.forgot-password {
+  color: #0e6fdc;
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.submit-btn {
+  // Grey-blue background matching the screenshot
+  background-color: #8da2b6;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background-color: #7b91a5;
+  }
+
+  &:active:not(:disabled) {
+    background-color: #6a7f93;
+  }
+
+  &:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+  }
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1rem 0;
+
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  &::before {
+    margin-right: .8em;
+  }
+
+  &::after {
+    margin-left: .8em;
+  }
+
+  .divider-text {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    white-space: nowrap;
+  }
+}
+
+.social-login {
+  display: flex;
+  gap: 1rem;
+}
+
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 10px 16px;
+  border-radius: 20px; // Pill shape
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  .social-icon {
+    flex-shrink: 0;
+  }
+}
+
+.form-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: #64748b;
+
+  .signup-link {
+    color: #0e6fdc;
+    text-decoration: none;
+    font-weight: 700;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.demo-helpers {
+  margin-top: 1.5rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.4;
+
+  code {
+    background: #f1f5f9;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: #475569;
+  }
+}

@@ -1,0 +1,128 @@
+<div class="settings-container">
+  <div class="header-section">
+    <h1>Email Integration Settings</h1>
+    <p>Configure your personal incoming (IMAP) and outgoing (SMTP) mail servers. Synced sales enquiries and sending quotation acknowledgements will use these credentials.</p>
+  </div>
+
+  <div class="settings-grid">
+    <div class="settings-card">
+      <div class="card-header">
+        <h2>Mail Server Settings</h2>
+        <span class="status-badge" [class.configured]="configured">
+          {{ configured ? 'Connected' : 'Not Configured' }}
+        </span>
+      </div>
+
+      <form (ngSubmit)="onSave()" #settingsForm="ngForm" class="settings-form">
+        
+        <div *ngIf="message" class="feedback-alert" [class.error]="messageType === 'error'" [class.success]="messageType === 'success'">
+          <span class="alert-icon">{{ messageType === 'error' ? '❌' : '✅' }}</span>
+          <span class="alert-text">{{ message }}</span>
+        </div>
+
+        <div class="section-divider">Incoming Mail Server (IMAP)</div>
+        
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="imapServer">IMAP Server</label>
+            <input type="text" id="imapServer" name="imapServer" [(ngModel)]="imapServer" required [disabled]="isLoading || isTesting">
+            <div *ngIf="imapServer && imapServer.includes('@')" class="validation-warning">
+              ⚠️ Enter a hostname (e.g. imap.gmail.com), not an email address.
+            </div>
+            <div *ngIf="imapServer && !imapServer.includes('@') && !imapServer.includes('.')" class="validation-warning">
+              ⚠️ "{{imapServer}}" doesn't look like a valid server. Try imap.gmail.com
+            </div>
+          </div>
+          <div class="form-group flex-1">
+            <label for="imapPort">IMAP Port</label>
+            <input type="number" id="imapPort" name="imapPort" [(ngModel)]="imapPort" required [disabled]="isLoading || isTesting">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="imapUsername">IMAP Username / Email</label>
+            <input type="email" id="imapUsername" name="imapUsername" [(ngModel)]="imapUsername" required [disabled]="isLoading || isTesting" placeholder="username@gmail.com">
+          </div>
+          <div class="form-group">
+            <label for="imapPassword">IMAP Password / App Password</label>
+            <input type="password" id="imapPassword" name="imapPassword" [(ngModel)]="imapPassword" required [disabled]="isLoading || isTesting" placeholder="••••••••">
+          </div>
+        </div>
+
+        <div class="section-divider">Outgoing Mail Server (SMTP)</div>
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="smtpServer">SMTP Server</label>
+            <input type="text" id="smtpServer" name="smtpServer" [(ngModel)]="smtpServer" required [disabled]="isLoading || isTesting">
+            <div *ngIf="smtpServer && smtpServer.includes('@')" class="validation-warning">
+              ⚠️ Enter a hostname (e.g. smtp.gmail.com), not an email address.
+            </div>
+            <div *ngIf="smtpServer && !smtpServer.includes('@') && !smtpServer.includes('.')" class="validation-warning">
+              ⚠️ "{{smtpServer}}" doesn't look like a valid server. Try smtp.gmail.com
+            </div>
+          </div>
+          <div class="form-group flex-1">
+            <label for="smtpPort">SMTP Port</label>
+            <input type="number" id="smtpPort" name="smtpPort" [(ngModel)]="smtpPort" required [disabled]="isLoading || isTesting">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="smtpUsername">SMTP Username / Email</label>
+            <input type="email" id="smtpUsername" name="smtpUsername" [(ngModel)]="smtpUsername" required [disabled]="isLoading || isTesting" placeholder="username@gmail.com">
+          </div>
+          <div class="form-group">
+            <label for="smtpPassword">SMTP Password / App Password</label>
+            <input type="password" id="smtpPassword" name="smtpPassword" [(ngModel)]="smtpPassword" required [disabled]="isLoading || isTesting" placeholder="••••••••">
+          </div>
+        </div>
+
+        <div class="form-row checkbox-row">
+          <label class="checkbox-container">
+            <input type="checkbox" id="useSsl" name="useSsl" [(ngModel)]="useSsl" [disabled]="isLoading || isTesting">
+            <span class="checkmark"></span>
+            Use Secure Connection (SSL/TLS)
+          </label>
+        </div>
+
+        <div class="action-buttons">
+          <button type="button" class="btn btn-secondary" (click)="onTest()" [disabled]="isLoading || isTesting || !settingsForm.valid || hasInvalidServers()">
+            <span *ngIf="!isTesting">Test Connection</span>
+            <span *ngIf="isTesting" class="spinner-small"></span>
+          </button>
+          
+          <button type="submit" class="btn btn-primary" [disabled]="isLoading || isTesting || !settingsForm.valid || hasInvalidServers()">
+            <span *ngIf="!isLoading">Save Settings</span>
+            <span *ngIf="isLoading" class="spinner-small"></span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="help-card">
+      <h2>Gmail Integration Guide</h2>
+      <p>If you are integrating with a Google/Gmail account, standard passwords will be rejected. You must configure a secure Google App Password:</p>
+      <ol>
+        <li>Go to your <a href="https://myaccount.google.com/" target="_blank">Google Account</a> security page.</li>
+        <li>Enable <strong>2-Step Verification</strong> if you haven't already.</li>
+        <li>Search for <strong>App Passwords</strong> in the search bar.</li>
+        <li>Select "Other" or "Mail" and generate a 16-character password code.</li>
+        <li>Use this generated 16-character code as the IMAP & SMTP password fields.</li>
+      </ol>
+      
+      <div class="config-summary">
+        <h3>Standard GMail Settings:</h3>
+        <ul>
+          <li><strong>IMAP Server:</strong> <code>imap.gmail.com</code></li>
+          <li><strong>IMAP Port:</strong> <code>993</code> (SSL)</li>
+          <li><strong>SMTP Server:</strong> <code>smtp.gmail.com</code></li>
+          <li><strong>SMTP Port:</strong> <code>465</code> (SSL)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

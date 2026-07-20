@@ -21,18 +21,30 @@ namespace AriyAI.ERP.Api.Data
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         public DbSet<Email> Emails => Set<Email>();
         public DbSet<PotentialItem> PotentialItems => Set<PotentialItem>();
+        public DbSet<AgentEmailConfiguration> AgentEmailConfigurations => Set<AgentEmailConfiguration>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure Email Indexes
+            // Configure Email Indexes and Relations
             modelBuilder.Entity<Email>()
                 .HasIndex(e => e.MessageId)
                 .IsUnique();
 
             modelBuilder.Entity<Email>()
                 .HasIndex(e => e.IsDeleted);
+
+            modelBuilder.Entity<Email>()
+                .HasOne(e => e.Agent)
+                .WithMany()
+                .HasForeignKey(e => e.AgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure AgentEmailConfiguration unique constraints
+            modelBuilder.Entity<AgentEmailConfiguration>()
+                .HasIndex(c => c.AgentId)
+                .IsUnique();
 
             // Configure cascade paths if needed
             modelBuilder.Entity<SalesEnquiry>()

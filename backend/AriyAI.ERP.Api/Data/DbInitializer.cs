@@ -45,6 +45,67 @@ namespace AriyAI.ERP.Api.Data
                     }
                 }
 
+                // Ensure Agents table has the Auth columns
+                using (var checkAgentsCmd = connection.CreateCommand())
+                {
+                    checkAgentsCmd.CommandText = "PRAGMA table_info(Agents);";
+                    using (var reader = checkAgentsCmd.ExecuteReader())
+                    {
+                        bool hasPasswordHash = false;
+                        bool hasSessionToken = false;
+                        bool hasTokenExpiresAt = false;
+                        while (reader.Read())
+                        {
+                            var colName = reader["name"].ToString();
+                            if (colName == "PasswordHash") hasPasswordHash = true;
+                            if (colName == "SessionToken") hasSessionToken = true;
+                            if (colName == "TokenExpiresAt") hasTokenExpiresAt = true;
+                        }
+                        reader.Close();
+
+                        if (!hasPasswordHash)
+                        {
+                            checkAgentsCmd.CommandText = "ALTER TABLE Agents ADD COLUMN PasswordHash TEXT NULL;";
+                            checkAgentsCmd.ExecuteNonQuery();
+                        }
+                        if (!hasSessionToken)
+                        {
+                            checkAgentsCmd.CommandText = "ALTER TABLE Agents ADD COLUMN SessionToken TEXT NULL;";
+                            checkAgentsCmd.ExecuteNonQuery();
+                        }
+                        if (!hasTokenExpiresAt)
+                        {
+                            checkAgentsCmd.CommandText = "ALTER TABLE Agents ADD COLUMN TokenExpiresAt TEXT NULL;";
+                            checkAgentsCmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+
+                // Ensure Emails table has the AgentId column
+                using (var checkEmailsCmd = connection.CreateCommand())
+                {
+                    checkEmailsCmd.CommandText = "PRAGMA table_info(Emails);";
+                    using (var reader = checkEmailsCmd.ExecuteReader())
+                    {
+                        bool hasAgentId = false;
+                        while (reader.Read())
+                        {
+                            if (reader["name"].ToString() == "AgentId")
+                            {
+                                hasAgentId = true;
+                                break;
+                            }
+                        }
+                        reader.Close();
+
+                        if (!hasAgentId)
+                        {
+                            checkEmailsCmd.CommandText = "ALTER TABLE Emails ADD COLUMN AgentId INTEGER NULL;";
+                            checkEmailsCmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = @"
@@ -75,10 +136,27 @@ namespace AriyAI.ERP.Api.Data
                             AttachmentsJson TEXT NOT NULL DEFAULT '[]',
                             ReceivedAt TEXT NOT NULL,
                             IsRead INTEGER NOT NULL DEFAULT 0,
-                            IsDeleted INTEGER NOT NULL DEFAULT 0
+                            IsDeleted INTEGER NOT NULL DEFAULT 0,
+                            AgentId INTEGER NULL,
+                            FOREIGN KEY(AgentId) REFERENCES Agents(Id) ON DELETE CASCADE
                         );
                         CREATE UNIQUE INDEX IF NOT EXISTS IX_Emails_MessageId ON Emails (MessageId);
                         CREATE INDEX IF NOT EXISTS IX_Emails_IsDeleted ON Emails (IsDeleted);
+                        CREATE TABLE IF NOT EXISTS AgentEmailConfigurations (
+                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            AgentId INTEGER NOT NULL UNIQUE,
+                            ImapServer TEXT NOT NULL,
+                            ImapPort INTEGER NOT NULL,
+                            ImapUsername TEXT NOT NULL,
+                            ImapPassword TEXT NOT NULL,
+                            SmtpServer TEXT NOT NULL,
+                            SmtpPort INTEGER NOT NULL,
+                            SmtpUsername TEXT NOT NULL,
+                            SmtpPassword TEXT NOT NULL,
+                            UseSsl INTEGER NOT NULL DEFAULT 1,
+                            LastSyncedAt TEXT NULL,
+                            FOREIGN KEY(AgentId) REFERENCES Agents(Id) ON DELETE CASCADE
+                        );
                         CREATE TABLE IF NOT EXISTS PotentialItems (
                             Id INTEGER PRIMARY KEY AUTOINCREMENT,
                             Name TEXT NOT NULL,
@@ -87,6 +165,15 @@ namespace AriyAI.ERP.Api.Data
                         );
                     ";
                     command.ExecuteNonQuery();
+                }
+
+                // Fix corrupted SmtpServer values that contain '@' (email addresses saved by mistake)
+                using (var fixCmd = connection.CreateCommand())
+                {
+                    fixCmd.CommandText = "UPDATE AgentEmailConfigurations SET SmtpServer = 'smtp.gmail.com' WHERE SmtpServer LIKE '%@gmail.com';";
+                    fixCmd.ExecuteNonQuery();
+                    fixCmd.CommandText = "UPDATE AgentEmailConfigurations SET ImapServer = 'imap.gmail.com' WHERE ImapServer LIKE '%@gmail.com';";
+                    fixCmd.ExecuteNonQuery();
                 }
             }
 
@@ -194,15 +281,39 @@ namespace AriyAI.ERP.Api.Data
             // Seed Agents if empty
             if (!context.Agents.Any())
             {
-                context.Agents.AddRange(new List<Agent>
+                var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Agent>();
+                var agentList = new List<Agent>
                 {
                     new Agent { Name = "U. THALAIMALAI", Email = "thalaimalai@ariyaitech.com", Phone = "9842216021" },
                     new Agent { Name = "ABHISHEK JAIN", Email = "abhishek@ariyaitech.com", Phone = "9842216022" },
                     new Agent { Name = "AJITH", Email = "ajith@ariyaitech.com", Phone = "9842216023" },
                     new Agent { Name = "K. NAGANATHAN", Email = "naganathan@ariyaitech.com", Phone = "9842216024" },
                     new Agent { Name = "K. SARAVANAN", Email = "saravanan@ariyaitech.com", Phone = "9842216025" }
-                });
+                };
+                foreach (var agent in agentList)
+                {
+                    agent.PasswordHash = passwordHasher.HashPassword(agent, "password123");
+                }
+                context.Agents.AddRange(agentList);
                 context.SaveChanges();
+            }
+            else
+            {
+                // Ensure existing agents have a password hash populated
+                var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Agent>();
+                bool updated = false;
+                foreach (var agent in context.Agents.ToList())
+                {
+                    if (string.IsNullOrEmpty(agent.PasswordHash))
+                    {
+                        agent.PasswordHash = passwordHasher.HashPassword(agent, "password123");
+                        updated = true;
+                    }
+                }
+                if (updated)
+                {
+                    context.SaveChanges();
+                }
             }
 
             // Seed mock emails for local UI process demo if empty

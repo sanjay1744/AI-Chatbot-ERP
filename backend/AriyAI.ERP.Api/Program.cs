@@ -46,6 +46,7 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
 // Register email sync, extraction and fuzzy catalog matching services
 builder.Services.AddScoped<AriyAI.ERP.Api.Services.ExtractionService>();
 builder.Services.AddScoped<AriyAI.ERP.Api.Services.MatchingService>();
+builder.Services.AddScoped<AriyAI.ERP.Api.Filters.AgentAuthFilter>();
 builder.Services.AddSingleton<AriyAI.ERP.Api.Services.EmailSyncWorker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AriyAI.ERP.Api.Services.EmailSyncWorker>());
 

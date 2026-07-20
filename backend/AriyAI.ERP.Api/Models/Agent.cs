@@ -13,7 +13,15 @@ namespace AriyAI.ERP.Api.Models
         [MaxLength(100)]
         public string Email { get; set; } = string.Empty;
 
-        [MaxLength(20)]
+        [MaxLength(100)]
         public string Phone { get; set; } = string.Empty;
+
+        [MaxLength(255)]
+        public string? PasswordHash { get; set; }
+
+        [MaxLength(255)]
+        public string? SessionToken { get; set; }
+
+        public DateTime? TokenExpiresAt { get; set; }
     }
 }

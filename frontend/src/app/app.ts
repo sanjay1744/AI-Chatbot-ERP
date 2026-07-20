@@ -4,6 +4,7 @@ import { SidebarComponent } from './layout/sidebar/sidebar.component';
 import { HeaderComponent } from './layout/header/header.component';
 import { AiAssistantComponent } from './modules/ai-assistant/ai-assistant.component';
 import { CopilotStateService } from './services/copilot-state.service';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +15,7 @@ import { CopilotStateService } from './services/copilot-state.service';
 export class App {
   title = 'AriyAI ERP & CRM';
   copilotState = inject(CopilotStateService);
+  authService = inject(AuthService);
 
   toggleCopilot(): void {
     this.copilotState.toggle();

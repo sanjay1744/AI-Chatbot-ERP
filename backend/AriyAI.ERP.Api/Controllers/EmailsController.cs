@@ -12,11 +12,13 @@ using System.Data;
 using AriyAI.ERP.Api.Data;
 using AriyAI.ERP.Api.Models;
 using AriyAI.ERP.Api.Services;
+using AriyAI.ERP.Api.Filters;
 
 namespace AriyAI.ERP.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [ServiceFilter(typeof(AgentAuthFilter))]
     public class EmailsController : ControllerBase
     {
         private readonly ErpDbContext _db;
@@ -39,8 +41,11 @@ namespace AriyAI.ERP.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetEmails()
         {
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
             var emails = await _db.Emails
-                .Where(e => !e.IsDeleted)
+                .Where(e => !e.IsDeleted && e.AgentId == currentAgent.Id)
                 .OrderByDescending(e => e.ReceivedAt)
                 .Take(50)
                 .ToListAsync();
@@ -50,14 +55,17 @@ namespace AriyAI.ERP.Api.Controllers
         [HttpPost("sync")]
         public async Task<IActionResult> SyncEmails(CancellationToken cancellationToken)
         {
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
             // Hard 15-second deadline so the endpoint never hangs
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(15));
 
             try
             {
-                int newCount = await _syncWorker.SyncEmailsAsync(cts.Token);
-                int total = await _db.Emails.CountAsync(cancellationToken);
+                int newCount = await _syncWorker.SyncEmailsAsync(cts.Token, currentAgent.Id);
+                int total = await _db.Emails.CountAsync(e => e.AgentId == currentAgent.Id, cancellationToken);
                 return Ok(new { status = "success", new_emails_synced = newCount, total_emails = total });
             }
             catch (OperationCanceledException)
@@ -73,7 +81,10 @@ namespace AriyAI.ERP.Api.Controllers
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkEmailAsRead(int id, [FromBody] MarkAsReadDto dto)
         {
-            var email = await _db.Emails.FindAsync(id);
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
+            var email = await _db.Emails.FirstOrDefaultAsync(e => e.Id == id && e.AgentId == currentAgent.Id);
             if (email == null) return NotFound();
 
             email.IsRead = dto.IsRead;
@@ -84,7 +95,10 @@ namespace AriyAI.ERP.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmail(int id)
         {
-            var email = await _db.Emails.FindAsync(id);
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
+            var email = await _db.Emails.FirstOrDefaultAsync(e => e.Id == id && e.AgentId == currentAgent.Id);
             if (email == null) return NotFound();
 
             email.IsDeleted = true;
@@ -95,7 +109,10 @@ namespace AriyAI.ERP.Api.Controllers
         [HttpPost("{id}/extract")]
         public async Task<IActionResult> ExtractProducts(int id)
         {
-            var email = await _db.Emails.FindAsync(id);
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
+            var email = await _db.Emails.FirstOrDefaultAsync(e => e.Id == id && e.AgentId == currentAgent.Id);
             if (email == null) return NotFound();
 
             // Mark email as read
@@ -253,15 +270,25 @@ namespace AriyAI.ERP.Api.Controllers
         [HttpPost("send-acknowledgement")]
         public async Task<IActionResult> SendAcknowledgement([FromBody] AcknowledgementRequestDto request)
         {
-            var user = Environment.GetEnvironmentVariable("EMAIL_USER");
-            var password = Environment.GetEnvironmentVariable("EMAIL_PASSWORD");
-            var smtpServer = Environment.GetEnvironmentVariable("SMTP_SERVER") ?? "smtp.gmail.com";
-            var smtpPortStr = Environment.GetEnvironmentVariable("SMTP_PORT") ?? "465";
-            int smtpPort = int.TryParse(smtpPortStr, out int p) ? p : 465;
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
+            var config = await _db.AgentEmailConfigurations
+                .FirstOrDefaultAsync(c => c.AgentId == currentAgent.Id);
+
+            if (config == null || string.IsNullOrEmpty(config.SmtpUsername) || string.IsNullOrEmpty(config.SmtpPassword))
+            {
+                return BadRequest(new { detail = "Your SMTP email credentials are not configured. Please go to Email Integration Settings." });
+            }
+
+            var user = config.SmtpUsername;
+            var password = CryptographyHelper.Decrypt(config.SmtpPassword);
+            var smtpServer = config.SmtpServer;
+            var smtpPort = config.SmtpPort;
 
             if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password))
             {
-                return BadRequest(new { detail = "SMTP email credentials (EMAIL_USER / EMAIL_PASSWORD) are not configured on the server." });
+                return BadRequest(new { detail = "Your SMTP username or password is empty." });
             }
 
             try
@@ -319,7 +346,10 @@ Naren Textile Engineers India Pvt. Ltd.";
         [HttpGet("{emailId}/attachments/{filename}")]
         public async Task<IActionResult> DownloadEmailAttachment(int emailId, string filename)
         {
-            var email = await _db.Emails.FindAsync(emailId);
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
+            var email = await _db.Emails.FirstOrDefaultAsync(e => e.Id == emailId && e.AgentId == currentAgent.Id);
             if (email == null) return NotFound();
 
             var attachments = new List<EmailAttachmentDto>();
@@ -358,7 +388,10 @@ Naren Textile Engineers India Pvt. Ltd.";
         [HttpGet("{emailId}/attachments/{filename}/preview")]
         public async Task<IActionResult> PreviewEmailAttachment(int emailId, string filename)
         {
-            var email = await _db.Emails.FindAsync(emailId);
+            var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
+            if (currentAgent == null) return Unauthorized();
+
+            var email = await _db.Emails.FirstOrDefaultAsync(e => e.Id == emailId && e.AgentId == currentAgent.Id);
             if (email == null) return NotFound();
 
             var attachments = new List<EmailAttachmentDto>();
@@ -430,11 +463,17 @@ Naren Textile Engineers India Pvt. Ltd.";
 
         private async Task<string?> TryRecoverAttachmentFromImap(Email email, string filename)
         {
-            var user = Environment.GetEnvironmentVariable("EMAIL_USER");
-            var password = Environment.GetEnvironmentVariable("EMAIL_PASSWORD");
-            var server = Environment.GetEnvironmentVariable("IMAP_SERVER") ?? "imap.gmail.com";
-            var portStr = Environment.GetEnvironmentVariable("IMAP_PORT") ?? "993";
-            int port = int.TryParse(portStr, out int p) ? p : 993;
+            if (!email.AgentId.HasValue) return null;
+
+            var config = await _db.AgentEmailConfigurations
+                .FirstOrDefaultAsync(c => c.AgentId == email.AgentId.Value);
+
+            if (config == null) return null;
+
+            var user = config.ImapUsername;
+            var password = CryptographyHelper.Decrypt(config.ImapPassword);
+            var server = config.ImapServer;
+            var port = config.ImapPort;
 
             if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(email.MessageId))
             {
