@@ -23,6 +23,11 @@ export class EmailSettingsComponent implements OnInit {
   smtpPassword = '';
   useSsl = true;
 
+  // Simplified fields
+  userEmail = '';
+  appPassword = '';
+  showAdvanced = false;
+
   isLoading = false;
   isTesting = false;
   message = '';
@@ -48,6 +53,10 @@ export class EmailSettingsComponent implements OnInit {
         this.smtpPassword = res.smtpPassword || '';
         this.useSsl = res.useSsl !== undefined ? res.useSsl : true;
         this.configured = res.configured;
+
+        // Initialize simple fields
+        this.userEmail = this.imapUsername || this.smtpUsername || '';
+        this.appPassword = this.imapPassword || this.smtpPassword || '';
       },
       error: (err) => {
         this.isLoading = false;
@@ -56,21 +65,33 @@ export class EmailSettingsComponent implements OnInit {
     });
   }
 
+  onPrimaryCredentialsChange() {
+    this.imapUsername = this.userEmail;
+    this.smtpUsername = this.userEmail;
+    this.imapPassword = this.appPassword;
+    this.smtpPassword = this.appPassword;
+  }
+
+  toggleAdvanced() {
+    this.showAdvanced = !this.showAdvanced;
+  }
+
   sanitizeServers() {
     // Auto-correct server hosts if user entered email addresses by mistake
     if (this.imapServer && this.imapServer.includes('@')) {
-      if (this.imapServer.toLowerCase().endsWith('@gmail.com')) {
+      if (this.imapServer.toLowerCase().endsWith('@gmail.com') || this.imapServer.toLowerCase().endsWith('@ariyaitech.com')) {
         this.imapServer = 'imap.gmail.com';
       }
     }
     if (this.smtpServer && this.smtpServer.includes('@')) {
-      if (this.smtpServer.toLowerCase().endsWith('@gmail.com')) {
+      if (this.smtpServer.toLowerCase().endsWith('@gmail.com') || this.smtpServer.toLowerCase().endsWith('@ariyaitech.com')) {
         this.smtpServer = 'smtp.gmail.com';
       }
     }
   }
 
   onSave() {
+    this.onPrimaryCredentialsChange();
     this.sanitizeServers();
     this.isLoading = true;
     const payload = {
@@ -91,6 +112,7 @@ export class EmailSettingsComponent implements OnInit {
         this.configured = true;
         if (this.imapPassword && this.imapPassword !== '********') {
           this.imapPassword = '********';
+          this.appPassword = '********';
         }
         if (this.smtpPassword && this.smtpPassword !== '********') {
           this.smtpPassword = '********';
@@ -105,6 +127,7 @@ export class EmailSettingsComponent implements OnInit {
   }
 
   onTest() {
+    this.onPrimaryCredentialsChange();
     this.sanitizeServers();
     this.isTesting = true;
     this.message = '';

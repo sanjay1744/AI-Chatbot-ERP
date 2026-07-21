@@ -19,6 +19,7 @@ export class SidebarComponent {
       icon: 'manage_accounts',
       isOpen: false,
       children: [
+        { name: 'My Profile', link: '/profile', icon: 'person' },
         { name: 'Users', link: '/ums/users', icon: 'people' }
       ]
     },

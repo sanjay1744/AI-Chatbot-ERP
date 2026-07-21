@@ -44,6 +44,17 @@ namespace AriyAI.ERP.Api.Controllers
             var currentAgent = HttpContext.Items["CurrentAgent"] as Agent;
             if (currentAgent == null) return Unauthorized();
 
+            // Auto-assign orphan emails (seeded with null AgentId) to the logged-in agent
+            var orphanEmails = await _db.Emails
+                .Where(e => !e.IsDeleted && e.AgentId == null)
+                .ToListAsync();
+            if (orphanEmails.Count > 0)
+            {
+                foreach (var e in orphanEmails)
+                    e.AgentId = currentAgent.Id;
+                await _db.SaveChangesAsync();
+            }
+
             var emails = await _db.Emails
                 .Where(e => !e.IsDeleted && e.AgentId == currentAgent.Id)
                 .OrderByDescending(e => e.ReceivedAt)

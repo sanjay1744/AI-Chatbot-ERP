@@ -1,0 +1,307 @@
+<div class="profile-container">
+  <!-- Header Section -->
+  <div class="profile-header-section">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <span class="material-icons-outlined">account_circle</span>
+      </div>
+      <div class="header-title-block">
+        <h1>My Profile</h1>
+        <p>View and manage your account details</p>
+      </div>
+    </div>
+    <div class="header-right-actions">
+      <button *ngIf="!isEditing" class="btn btn-edit-profile" (click)="toggleEditMode()">
+        <span class="material-icons-outlined">edit</span>
+        <span>Edit Profile</span>
+      </button>
+      <button *ngIf="isEditing" class="btn btn-cancel-profile" (click)="toggleEditMode()">
+        <span>Cancel</span>
+      </button>
+      <button *ngIf="isEditing" class="btn btn-save-profile" (click)="saveProfile()" [disabled]="isSaving">
+        <span *ngIf="!isSaving" class="material-icons-outlined">save</span>
+        <span *ngIf="isSaving" class="spinner-small"></span>
+        <span>{{ isSaving ? 'Saving...' : 'Save Profile' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Feedback Alert Banner -->
+  <div *ngIf="feedbackMessage" class="feedback-banner" [class.success]="feedbackType === 'success'" [class.error]="feedbackType === 'error'">
+    <span class="material-icons-outlined alert-icon">{{ feedbackType === 'success' ? 'check_circle' : 'error' }}</span>
+    <span class="alert-text">{{ feedbackMessage }}</span>
+  </div>
+
+  <!-- Two-Column Profile Grid -->
+  <div class="profile-grid">
+    <!-- Left Column: User Summary Card -->
+    <div class="summary-card">
+      <div class="avatar-wrapper">
+        <div class="avatar-circle">
+          <span>{{ getInitials() }}</span>
+        </div>
+      </div>
+      <h2 class="user-display-name">{{ fullName }}</h2>
+      <span class="user-handle">@{{ username }}</span>
+      
+      <div class="status-badge-container">
+        <span class="status-badge active">
+          <span class="dot"></span> Active
+        </span>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <!-- Key Metadata List -->
+      <div class="metadata-list">
+        <div class="metadata-row">
+          <div class="meta-label">
+            <span class="material-icons-outlined meta-icon">badge</span>
+            <span>Role</span>
+          </div>
+          <span class="meta-value">{{ roleType !== '-' ? roleType : '—' }}</span>
+        </div>
+
+        <div class="metadata-row">
+          <div class="meta-label">
+            <span class="material-icons-outlined meta-icon">domain</span>
+            <span>Company ID</span>
+          </div>
+          <span class="meta-value font-bold">{{ companyId }}</span>
+        </div>
+
+        <div class="metadata-row">
+          <div class="meta-label">
+            <span class="material-icons-outlined meta-icon">groups</span>
+            <span>Group</span>
+          </div>
+          <span class="meta-value font-bold group-tag">{{ groupName }}</span>
+        </div>
+
+        <div class="metadata-row">
+          <div class="meta-label">
+            <span class="material-icons-outlined meta-icon">fingerprint</span>
+            <span>Agent ID</span>
+          </div>
+          <span class="meta-value font-bold">{{ agentId }}</span>
+        </div>
+
+        <div class="metadata-row">
+          <div class="meta-label">
+            <span class="material-icons-outlined meta-icon">work_outline</span>
+            <span>Emp ID</span>
+          </div>
+          <span class="meta-value font-bold">{{ empId }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Sections -->
+    <div class="details-sections">
+      
+      <!-- Card 1: Personal Information -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons-outlined section-icon">person_outline</span>
+          <h3>Personal Information</h3>
+        </div>
+
+        <div class="section-body">
+          <div class="form-group full-width">
+            <label for="fullName">FULL NAME <span class="required-asterisk">*</span></label>
+            <input type="text" id="fullName" [(ngModel)]="fullName" [disabled]="!isEditing" placeholder="Thalaimalai">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="shortName">SHORT NAME</label>
+              <input type="text" id="shortName" [(ngModel)]="shortName" [disabled]="!isEditing" placeholder="Thalaimalai">
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="username">USERNAME</label>
+              <div class="input-with-badge">
+                <span class="at-symbol">@</span>
+                <input type="text" id="username" [(ngModel)]="username" disabled class="has-badge-input">
+                <span class="cannot-change-badge">Cannot change</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="mobile">MOBILE</label>
+            <div class="input-with-prefix">
+              <span class="material-icons-outlined input-prefix-icon">phone</span>
+              <input type="tel" id="mobile" [(ngModel)]="mobile" [disabled]="!isEditing" placeholder="+91 00000 00000">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Email Integration Details (ADDED BEFORE ADDRESS AS REQUESTED) -->
+      <div class="section-card email-details-card">
+        <div class="section-header justify-between">
+          <div class="header-title-left">
+            <span class="material-icons-outlined section-icon email-icon-color">mail_outline</span>
+            <div>
+              <h3>Email Integration & App Password</h3>
+              <p class="section-subtitle">Synced sales enquiries and quotation acknowledgements will use these credentials.</p>
+            </div>
+          </div>
+          <span class="status-pill" [class.configured]="appPassword">
+            {{ appPassword ? 'Configured' : 'Not Configured' }}
+          </span>
+        </div>
+
+        <div class="section-body">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="userEmail">EMAIL ADDRESS / USERNAME <span class="required-asterisk">*</span></label>
+              <input type="email" id="userEmail" [(ngModel)]="userEmail" [disabled]="!isEditing" placeholder="sanjay.s@ariyaitech.com">
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="appPassword">APP PASSWORD / MAIL PASSWORD <span class="required-asterisk">*</span></label>
+              <div class="password-input-wrapper">
+                <input [type]="showAppPassword ? 'text' : 'password'" id="appPassword" [(ngModel)]="appPassword" [disabled]="!isEditing" placeholder="••••••••••••••••">
+                <button type="button" class="btn-toggle-eye" (click)="toggleAppPasswordVisibility()" [disabled]="!appPassword">
+                  <span class="material-icons-outlined">{{ showAppPassword ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Test & Setup Notice -->
+          <div class="email-action-row">
+            <button type="button" class="btn btn-secondary-outline" (click)="testEmailConnection()" [disabled]="isTestingEmail || !userEmail || !appPassword">
+              <span *ngIf="!isTestingEmail" class="material-icons-outlined">sync</span>
+              <span *ngIf="isTestingEmail" class="spinner-small"></span>
+              <span>{{ isTestingEmail ? 'Testing Connection...' : 'Test Connection' }}</span>
+            </button>
+
+            <button type="button" class="btn-link-toggle" (click)="toggleAdvancedEmail()">
+              <span>{{ showAdvancedEmailSettings ? '▲ Hide Advanced Host Settings' : '⚙️ Custom IMAP/SMTP Hosts (Advanced)' }}</span>
+            </button>
+          </div>
+
+          <!-- Advanced Collapsible IMAP/SMTP Settings -->
+          <div *ngIf="showAdvancedEmailSettings" class="advanced-email-box">
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>IMAP SERVER HOST</label>
+                <input type="text" [(ngModel)]="imapServer" [disabled]="!isEditing">
+              </div>
+              <div class="form-group flex-1">
+                <label>IMAP PORT</label>
+                <input type="number" [(ngModel)]="imapPort" [disabled]="!isEditing">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>SMTP SERVER HOST</label>
+                <input type="text" [(ngModel)]="smtpServer" [disabled]="!isEditing">
+              </div>
+              <div class="form-group flex-1">
+                <label>SMTP PORT</label>
+                <input type="number" [(ngModel)]="smtpPort" [disabled]="!isEditing">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Address -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons-outlined section-icon">location_on</span>
+          <h3>Address</h3>
+        </div>
+
+        <div class="section-body">
+          <div class="form-group full-width">
+            <label for="addressLine1">ADDRESS LINE 1</label>
+            <input type="text" id="addressLine1" [(ngModel)]="addressLine1" [disabled]="!isEditing" placeholder="Street / Building">
+          </div>
+
+          <div class="form-group full-width">
+            <label for="addressLine2">ADDRESS LINE 2</label>
+            <input type="text" id="addressLine2" [(ngModel)]="addressLine2" [disabled]="!isEditing" placeholder="Area / Locality">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="city">CITY</label>
+              <input type="text" id="city" [(ngModel)]="city" [disabled]="!isEditing" placeholder="City">
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="stateCountry">STATE / COUNTRY</label>
+              <input type="text" id="stateCountry" [(ngModel)]="stateCountry" [disabled]="!isEditing" placeholder="State / Country">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Account Details -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons-outlined section-icon">badge</span>
+          <h3>Account Details</h3>
+        </div>
+
+        <div class="section-body">
+          <div class="account-details-grid">
+            <div class="grid-cell">
+              <span class="cell-label">USER ID</span>
+              <span class="cell-value font-bold">{{ userId }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">ROLE ID</span>
+              <span class="cell-value font-bold">{{ roleId }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">ROLE TYPE</span>
+              <span class="cell-value">{{ roleType }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">CATEGORY ID</span>
+              <span class="cell-value font-bold">{{ categoryId }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">USER GROUP ID</span>
+              <span class="cell-value font-bold">{{ userGroupId }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">GROUP NAME</span>
+              <span class="cell-value font-bold highlight-text">{{ groupName }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">COMPANY ID</span>
+              <span class="cell-value font-bold">{{ companyId }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">ALLOW EDIT</span>
+              <span class="cell-value">{{ allowEdit }}</span>
+            </div>
+
+            <div class="grid-cell">
+              <span class="cell-label">STATUS</span>
+              <span class="status-badge active inline-badge">
+                <span class="dot"></span> {{ status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

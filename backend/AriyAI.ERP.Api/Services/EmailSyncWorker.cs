@@ -156,7 +156,7 @@ namespace AriyAI.ERP.Api.Services
                 var envelope = summary.Envelope;
                 if (envelope == null) continue;
 
-                var messageId = envelope.MessageId?.Trim('<', '>', ' ', '\t') ?? $"fallback-{envelope.Date.Value.Ticks}";
+                var messageId = envelope.MessageId?.Trim('<', '>', ' ', '\t') ?? $"fallback-{(envelope.Date?.Ticks ?? DateTimeOffset.UtcNow.Ticks)}-{summary.UniqueId}";
 
                 // Idempotency Check scoped per Agent
                 bool exists = db.Emails.Any(e => e.MessageId == messageId && e.AgentId == config.AgentId);

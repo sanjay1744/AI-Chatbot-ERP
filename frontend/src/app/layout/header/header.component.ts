@@ -475,6 +475,10 @@ Augustine`
     this.authService.logout().subscribe();
   }
 
+  goToProfile() {
+    this.router.navigate(['/profile']);
+  }
+
   goToEmailSettings() {
     this.router.navigate(['/settings/email']);
   }

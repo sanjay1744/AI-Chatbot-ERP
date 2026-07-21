@@ -145,6 +145,40 @@
   }
 }
 
+.advanced-toggle-wrapper {
+  margin: 0.5rem 0;
+}
+
+.btn-toggle-advanced {
+  background: none;
+  border: none;
+  color: #357197;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #295775;
+    text-decoration: underline;
+  }
+}
+
+.advanced-settings-panel {
+  background: #f8fafc;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
 .checkbox-row {
   margin: 0.5rem 0;
 }

@@ -6,6 +6,7 @@ import { QuotationFormComponent } from './modules/quotation/quotation-form/quota
 import { DashboardComponent } from './modules/dashboard/dashboard.component';
 import { LoginComponent } from './modules/auth/login/login.component';
 import { EmailSettingsComponent } from './modules/settings/email-settings/email-settings.component';
+import { ProfileComponent } from './modules/profile/profile.component';
 import { authGuard } from './services/auth.guard';
 
 export const routes: Routes = [
@@ -15,6 +16,8 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: 'dashboard', component: DashboardComponent },
+      { path: 'profile', component: ProfileComponent },
+      { path: 'ums/profile', component: ProfileComponent },
       { path: 'lead/sales-enquiry', component: EnquiryListComponent },
       { path: 'lead/sales-enquiry/new', component: EnquiryFormComponent },
       { path: 'lead/sales-enquiry/edit/:id', component: EnquiryFormComponent },
